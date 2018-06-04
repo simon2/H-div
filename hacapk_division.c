@@ -179,9 +179,10 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
   create_leafmtx(st_leafmtx,st_clt,st_clt,param,lnmtx,nffc,&nlf);
   end = get_wall_time();
   spent = end - start;
+  printf("nlf:%d\n",nlf);
   printf("block cluster tree time spent:%.10f\n",spent);
   printf("depth_max:%d  count_node:%d\n",depth_max,count_node);
-  qsort_row_leafmtx(st_leafmtx,0,nlf-1);
+  /*qsort_row_leafmtx(st_leafmtx,0,nlf-1);
   int ilp = 0;
   int ips = 0;
   for(ip=0;ip<nlf;ip++){
@@ -208,7 +209,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
       int is = ig + il * nffc;
       lod[is] = lodfc[il];
     }
-  }
+    }*/
 }
 
 void qsort_row_leafmtx(leafmtx *st_leafmtx,int first,int last){

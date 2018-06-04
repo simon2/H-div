@@ -376,13 +376,13 @@ void create_leafmtx(leafmtx *temp_leafmtx,cluster *st_cltl,cluster *st_cltt,
 	int my_num = omp_get_thread_num(); 
 	if(my_num == 0){
 	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[0],st_cltt->pc_sons[0],param,lnmtx,nffc,nlf);
-	}else if(my_num == 1){
+	}/*else if(my_num == 1){
 	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[0],st_cltt->pc_sons[1],param,lnmtx,nffc,nlf);
 	}else if(my_num == 2){
 	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[1],st_cltt->pc_sons[0],param,lnmtx,nffc,nlf);
 	}else if(my_num == 3){
 	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[1],st_cltt->pc_sons[1],param,lnmtx,nffc,nlf);
-	}
+	  }*/
       }
     }else{
       for(il=0;il<nnsonl;il++){
