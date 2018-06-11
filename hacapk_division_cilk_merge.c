@@ -6,6 +6,7 @@
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
 #include <cilk/reducer.h>
+#include <cilk/reducer_opadd.h>
 #include <cilk/reducer_min_max.h>
 
 /*********define cluster************/
@@ -538,6 +539,9 @@ void free_st_clt(cluster *st_clt){
   free(st_clt->pc_sons);
 }
 
+//CILK_C_REDUCER_MAX(max,double,-10.1);
+//CILK_C_REDUCER_MIN(min,double,10.1);
+
 /****create cluster tree******/
 cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
 			      double (*zgmid)[3],     //coordination of objects
@@ -560,24 +564,23 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
     nson = 0;
     st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
   }else{
-    if(ndpth < 5){
+    if(ndpth < 6){
       CILK_C_REDUCER_MAX(max,double,-10.1);
       CILK_C_REDUCER_MIN(min,double,10.1);
-      for(id=0;id<ndim;id++){
-	REDUCER_VIEW(min) = zgmid[lod[0]][id];
-	REDUCER_VIEW(max) = zgmid[lod[0]][id];
-    	_Cilk_for(il=1;il<nd;il++){
-    	  double zg = zgmid[lod[il]][id];
-    	  if(zg < REDUCER_VIEW(min)){
-    	    REDUCER_VIEW(min) = zg;
-    	  }else if(REDUCER_VIEW(max) < zg){
-    	    REDUCER_VIEW(max) = zg;
-    	  }
+      CILK_C_REGISTER_REDUCER(max);
+      CILK_C_REGISTER_REDUCER(min);
+      _Cilk_for(id=0;id<ndim;id++){
+	REDUCER_VIEW(min) = 10.1;
+	REDUCER_VIEW(max) = -10.1;
+	_Cilk_for(il=1;il<nd;il++){
+	  CILK_C_REDUCER_MIN_CALC(min,zgmid[lod[il]][id]);
+	  CILK_C_REDUCER_MAX_CALC(max,zgmid[lod[il]][id]);
     	}
-	cilk_sync;	
      	zlmin[id] = REDUCER_VIEW(min);
     	zlmax[id] = REDUCER_VIEW(max);
       }
+      CILK_C_UNREGISTER_REDUCER(max);
+      CILK_C_UNREGISTER_REDUCER(min);
     }else{
       for(id=0;id<ndim;id++){
 	zlmin[id] = zgmid[lod[0]][id];
