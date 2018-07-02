@@ -310,7 +310,7 @@ void create_leafmtx(leafmtx **st_leafmtx,cluster *st_cltl,cluster *st_cltt,
   double nleaf = param[41];
   double zeta = param[51];
   double zdistlt = dist_2cluster(st_cltl,st_cltt);
-  int condition1 = (st_cltl->zwdth <= zeta * zdistlt || st_cltt->zwdth <= zeta * zdistlt) && (ndl >= nleaf && ndt >= nleaf);
+  int condition1 = (st_cltl->zwdth * zeta <= zdistlt || st_cltt->zwdth * zeta <= zdistlt) && (ndl >= nleaf && ndt >= nleaf);
   int condition2 = nnsonl == 0 || nnsont == 0 || ndl <= nleaf || ndt <= nleaf;
 
   if(condition1 || condition2){
@@ -448,7 +448,7 @@ void set_bndbox_cog(cluster *st_clt, double (*zgmid)[3], int *lod, int nofc){
     if(ic == 0){
       l = 0;
     }else{
-      l = l + st_clt->pc_sons[ic]->nsize;
+      l = l + st_clt->pc_sons[ic-1]->nsize;
     }
     set_bndbox_cog(st_clt->pc_sons[ic],zgmid,&lod[l],nofc);
   }
