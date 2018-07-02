@@ -352,7 +352,7 @@ void create_leafmtx(leafmtx *temp_leafmtx,cluster *st_cltl,cluster *st_cltt,
   double zeta = param[51];
   double zdistlt = dist_2cluster(st_cltl,st_cltt);
 
-  if((st_cltl->zwdth <= zeta * zdistlt || st_cltt->zwdth <= zeta * zdistlt) && (ndl >= nleaf && ndt >= nleaf)){
+  if((st_cltl->zwdth * zeta <= zdistlt || st_cltt->zwdth * zeta <= zdistlt) && (ndl >= nleaf && ndt >= nleaf)){
     int my_nlf = my_num*nlf + countlist[my_num];
     temp_leafmtx[my_nlf].nstrtl = nstrtl;
     temp_leafmtx[my_nlf].ndl = ndl;
@@ -376,13 +376,13 @@ void create_leafmtx(leafmtx *temp_leafmtx,cluster *st_cltl,cluster *st_cltt,
 	int my_num = omp_get_thread_num(); 
 	if(my_num == 0){
 	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[0],st_cltt->pc_sons[0],param,lnmtx,nffc,nlf);
-	}/*else if(my_num == 1){
+	}else if(my_num == 1){
 	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[0],st_cltt->pc_sons[1],param,lnmtx,nffc,nlf);
 	}else if(my_num == 2){
 	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[1],st_cltt->pc_sons[0],param,lnmtx,nffc,nlf);
 	}else if(my_num == 3){
 	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[1],st_cltt->pc_sons[1],param,lnmtx,nffc,nlf);
-	  }*/
+	}
       }
     }else{
       for(il=0;il<nnsonl;il++){
@@ -419,7 +419,7 @@ void count_lntmx(cluster *st_cltl,cluster *st_cltt,double param[],int *lnmtx,int
   double nleaf = param[41];
   double zeta = param[51];
   double zdistlt = dist_2cluster(st_cltl,st_cltt);
-  if ((st_cltl->zwdth <= zeta * zdistlt || st_cltt->zwdth <= zeta * zdistlt) && (ndl >= nleaf && ndt >= nleaf)){
+  if ((st_cltl->zwdth * zeta <= zdistlt || st_cltt->zwdth * zeta <= zdistlt) && (ndl >= nleaf && ndt >= nleaf)){
     lnmtx[0] = lnmtx[0] + 1;
   }else{
     if(nnsonl == 0 || nnsont == 0 || ndl <= nleaf || ndt <= nleaf){
@@ -498,7 +498,7 @@ void set_bndbox_cog(cluster *st_clt, double (*zgmid)[3], int *lod, int nofc){
     if(ic == 0){
       l = 0;
     }else{
-      l = l + st_clt->pc_sons[ic]->nsize;
+      l = l + st_clt->pc_sons[ic-1]->nsize;
     }
     set_bndbox_cog(st_clt->pc_sons[ic],zgmid,&lod[l],nofc);
   }
