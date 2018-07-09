@@ -24,5 +24,15 @@ como:
 
 coms:
 	icc -std=c99 -O3 -o hd hacapk_division.c -lm
+
 tssrun:
 	tssrun -A p=1:c=36:t=36:m=120G ./hdcm 36
+
+ress:
+	cat B*.o* | grep "sequtial time spent"
+
+resj:
+	cat B*.o* | grep "jump access"
+
+resu:
+	cat B*.o* | grep "succession access"
