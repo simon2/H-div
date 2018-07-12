@@ -192,7 +192,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   printf("NLF:%d\n",NLF);
 
   /*****sort the array of leafmatrices*****/
-  /qsort_row_leafmtx(st_leafmtx,0,nlf-1);
+  qsort_row_leafmtx(st_leafmtx,0,nlf-1);
   int ilp = 0;
   int ips = 0;
   for(ip=0;ip<nlf;ip++){
