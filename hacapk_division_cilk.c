@@ -6,6 +6,8 @@
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
 
+#define INPUT_DEFAULT "bem_data/input_50ms.txt"
+
 /*********define cluster************/
 typedef struct cluster cluster;
 struct cluster{
@@ -57,15 +59,18 @@ int main(int argc, char **argv){
   int nworkers = __cilkrts_get_nworkers();
   printf("number of workers:%d\n",nworkers);
   /******** read file *********/
+  char *fname;
   FILE *file;
   int countOfNode=0;
   int count = 0;
   int i;
   double (*coordOfNode)[3];
   double (*coordOfFace)[3];
-  file = fopen("bem_data/input_50ms.txt","r");
+  fname = (argc >= 3)?argv[2]:INPUT_DEFAULT;
+  file = fopen(fname,"r");
   if(file == NULL){
-    printf("Error: Unable to input file 'input_50ms.txt'!\n");
+    printf("Error: Unable to input file '%s'!\n", fname);
+    exit (99);
   }else{
     char line[100];
     fgets(line,sizeof(line),file);
