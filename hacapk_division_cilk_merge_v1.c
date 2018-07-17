@@ -169,7 +169,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   int nclst = 0;
   int ndpth = 0;
   int ndscd = 0;
-
+  int nworkers = __cilkrts_get_nworkers();
   double start,end,spent;
 
   /*******create cluster tree*******/
@@ -177,7 +177,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   st_clt = create_ctree_ssgeom(st_clt,gmid,param,lodfc,ndpth,ndscd,nsrt,ndf,nofc,ndim,nclst);
   end = get_wall_time();
   spent = end - start;
-  printf("cluster tree time spent:%.10f\n",spent);
+  printf("v1 %d cluster tree time spent:%.10f\n",nworkers,spent);
   //printf("cnt:%d %d %d\n",cs[0],cs[1],cs[2]);
   /*****add info of boundary box for cluster*****/
   set_bndbox_cog(st_clt,gmid,lodfc,nofc);
@@ -198,8 +198,6 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   st_leafmtxp->nlf = nlf;
   printf("nlf:%d\n",nlf);
   
-  int nworkers = __cilkrts_get_nworkers();
-
   for(i=0;i<500;i++){
     ncall[i] = 0;
   }
