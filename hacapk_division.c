@@ -50,6 +50,8 @@ cluster * create_ctree_ssgeom(cluster *st_clt,double (*zgmid)[3],double param[],
 double get_wall_time();
 double get_cpu_time();
 
+void checkClusterTree(FILE *f,cluster *st_clt);
+
 int depth_max;
 int count_node;
 
@@ -169,6 +171,10 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
   printf("cluster tree time spent:%.10f\n",spent);
 
   set_bndbox_cog(st_clt,gmid,lodfc,nofc);
+
+  /*FILE *f = fopen("8_sequential.txt", "w");
+  checkClusterTree(f,st_clt);
+  fclose(f);*/
 
   ndpth = 0;
   count_lntmx(st_clt,st_clt,param,lnmtx,nffc);
@@ -470,6 +476,22 @@ void free_st_clt(cluster *st_clt){
   free(st_clt->pc_sons);
 }
 
+void checkClusterTree(FILE *f,cluster *st_clt){
+  if(st_clt->ndpth<11){
+    fprintf(f,"%d %d %d %d %lf\n",st_clt->nstrt,st_clt->nsize,st_clt->ndpth,st_clt->nnson,st_clt->zwdth);
+  }
+  if(st_clt->nnson==0){
+    //fprintf(f,"%lf %lf %lf %lf %lf %lf ",st_clt->bmin[0],st_clt->bmin[1],st_clt->bmin[2],st_clt->bmax[0],st_clt->bmax[1],st_clt->bmax[2]);
+    //fprintf(f,"%d %d %d %d %lf\n",st_clt->nstrt,st_clt->nsize,st_clt->ndpth,st_clt->nnson,st_clt->zwdth);
+    return;
+  }else if(st_clt->nnson==1){
+    checkClusterTree(f,st_clt->pc_sons[0]);
+  }else{
+    checkClusterTree(f,st_clt->pc_sons[0]);
+    checkClusterTree(f,st_clt->pc_sons[1]);
+  }
+}
+
 /****create cluster tree******/
 cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
 			      double (*zgmid)[3],     //coordination of objects
@@ -490,6 +512,11 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
   if(nd <= minsz){
     nson = 0;
     st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
+    if(ndpth<11){
+      FILE *f = fopen("7.txt", "a");
+      fprintf(f,"%d %d %d %d\n",st_clt->nstrt,st_clt->nsize,st_clt->ndpth,st_clt->nnson);
+      fclose(f);
+    }
     if(ndpth > depth_max){
       depth_max = ndpth;
     }
@@ -536,6 +563,11 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
     if(nl == nd || nl == 0){
       nson = 1;
       st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
+      if(ndpth<11){
+	FILE *f = fopen("7.txt", "a");
+	fprintf(f,"%d %d %d %d\n",st_clt->nstrt,st_clt->nsize,st_clt->ndpth,st_clt->nnson);
+	fclose(f);
+      }
       if(ndpth > depth_max){
 	depth_max = ndpth;
       }
@@ -545,6 +577,11 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
     }else{
       nson = 2;
       st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
+      if(ndpth<11){
+	FILE *f = fopen("7.txt", "a");
+	fprintf(f,"%d %d %d %d\n",st_clt->nstrt,st_clt->nsize,st_clt->ndpth,st_clt->nnson);
+	fclose(f);
+      }
       if(ndpth > depth_max){
 	depth_max = ndpth;
       }

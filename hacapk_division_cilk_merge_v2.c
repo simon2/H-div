@@ -54,13 +54,14 @@ void free_st_clt(cluster *st_clt);
 cluster * create_ctree_ssgeom(cluster *st_clt,double (*zgmid)[3],double param[],int *lod,int ndpth,int ndscd,int nsrt,int nd,int md,int ndim,int nclst);
 double get_wall_time();
 double get_cpu_time();
-
+int depth_max(cluster *st_clt);
 void checkClusterTree(FILE *f,cluster *st_clt);
 
 int ncall[500];
 int countlist[500];
 double ntime[2][36];
 int cs[3]={0,0,0};
+int depth_m = 0;
 
 int main(int argc, char **argv){
   if(argc >= 2){
@@ -169,7 +170,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   int nclst = 0;
   int ndpth = 0;
   int ndscd = 0;
-
+  int nworkers = __cilkrts_get_nworkers();
   double start,end,spent;
 
   /*******create cluster tree*******/
@@ -177,14 +178,16 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   st_clt = create_ctree_ssgeom(st_clt,gmid,param,lodfc,ndpth,ndscd,nsrt,ndf,nofc,ndim,nclst);
   end = get_wall_time();
   spent = end - start;
-  printf("cluster tree time spent:%.10f\n",spent);
+  printf("v2 %d cluster tree time spent:%.10f\n",nworkers,spent);
   //printf("cnt:%d %d %d\n",cs[0],cs[1],cs[2]);
+  depth_max(st_clt);
+  printf("%d\n",depth_m);
   /*****add info of boundary box for cluster*****/
   set_bndbox_cog(st_clt,gmid,lodfc,nofc);
 
-  //FILE *f = fopen("bountary2.txt", "w");
-  //checkClusterTree(f,st_clt);
-  //fclose(f);
+  FILE *f = fopen("cluster_tree_v2.txt", "w");
+  checkClusterTree(f,st_clt);
+  fclose(f);
 
   ndpth = 0;
 
@@ -197,8 +200,6 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   st_leafmtx = (leafmtx **)malloc(nlf*sizeof(leafmtx*));
   st_leafmtxp->nlf = nlf;
   printf("nlf:%d\n",nlf);
-  
-  int nworkers = __cilkrts_get_nworkers();
 
   for(i=0;i<500;i++){
     ncall[i] = 0;
@@ -404,9 +405,11 @@ void create_leafmtx(leafmtx *restrict temp_leafmtx,cluster *st_cltl,cluster *st_
 
   }else{
     if(st_cltl_depth < 8 && st_cltt_depth < 8){
+#pragma cilk grainsize = 1
       _Cilk_for(il=0;il<nnsonl;il++){
-	_Cilk_for(it=0;it<nnsont;it++){
-	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[il],st_cltt->pc_sons[it],param,lnmtx,nffc,nlf);
+	int ip;
+	for(ip=0;ip<nnsont;ip++){
+	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[il],st_cltt->pc_sons[ip],param,lnmtx,nffc,nlf);
 	}
       }
     }else{
@@ -462,7 +465,7 @@ void count_lntmx(cluster *st_cltl,cluster *st_cltt,double param[],int *lnmtx,int
 
 void checkClusterTree(FILE *f,cluster *st_clt){
   if(st_clt->nnson==0){
-    fprintf(f,"%lf %lf %lf %lf %lf %lf\n",st_clt->bmin[0],st_clt->bmin[1],st_clt->bmin[2],st_clt->bmax[0],st_clt->bmax[1],st_clt->bmax[2]);
+    fprintf(f,"%lf %lf %lf %lf %lf %lf ",st_clt->bmin[0],st_clt->bmin[1],st_clt->bmin[2],st_clt->bmax[0],st_clt->bmax[1],st_clt->bmax[2]);
     return;
   }else if(st_clt->nnson==1){
     checkClusterTree(f,st_clt->pc_sons[0]);
@@ -577,6 +580,15 @@ void free_st_clt(cluster *st_clt){
   free(st_clt->pc_sons);
 }
 
+int depth_max(cluster *st_clt){
+  int i;
+  if(st_clt->ndpth > depth_m){
+    depth_m = st_clt->ndpth;
+  }
+  for(i=0;i<st_clt->nnson;i++){
+    depth_max(st_clt->pc_sons[i]);
+  }
+}
 
 /****create cluster tree******/
 cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
@@ -726,7 +738,7 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
       int nsrt1 = nsrt;
       int nd1 = nl;
 
-      if(ndpth<8){
+      if(ndpth<11){
 	st_clt->pc_sons[0] = _Cilk_spawn create_ctree_ssgeom(st_clt->pc_sons[0],zgmid,param,lod,
 							     ndpth,ndscd,nsrt1,nd1,md,ndim,nclst);
       }else{
@@ -738,7 +750,7 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
       nd1 = nd - nl;
       st_clt->pc_sons[1] = create_ctree_ssgeom(st_clt->pc_sons[1],zgmid,param,&lod[nl],
 					       ndpth,ndscd,nsrt1,nd1,md,ndim,nclst);
-      if(ndpth<8){
+      if(ndpth<11){
 	_Cilk_sync;
       }
     }
