@@ -691,7 +691,7 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
       int *moreNum = (int *)malloc(gn*sizeof(int));
       int *lessStart = (int *)malloc(gn*sizeof(int));
       int *moreStart = (int *)malloc(gn*sizeof(int));
-      for(id=0;id<gn;id++){
+      _Cilk_for(id=0;id<gn;id++){
 	lessNum[id] = 0;
 	moreNum[id] = 0;
 	lessStart[id] = 0;
