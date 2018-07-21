@@ -512,11 +512,6 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
   if(nd <= minsz){
     nson = 0;
     st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
-    if(ndpth<11){
-      FILE *f = fopen("7.txt", "a");
-      fprintf(f,"%d %d %d %d\n",st_clt->nstrt,st_clt->nsize,st_clt->ndpth,st_clt->nnson);
-      fclose(f);
-    }
     if(ndpth > depth_max){
       depth_max = ndpth;
     }
@@ -563,11 +558,6 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
     if(nl == nd || nl == 0){
       nson = 1;
       st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
-      if(ndpth<11){
-	FILE *f = fopen("7.txt", "a");
-	fprintf(f,"%d %d %d %d\n",st_clt->nstrt,st_clt->nsize,st_clt->ndpth,st_clt->nnson);
-	fclose(f);
-      }
       if(ndpth > depth_max){
 	depth_max = ndpth;
       }
@@ -577,11 +567,6 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
     }else{
       nson = 2;
       st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
-      if(ndpth<11){
-	FILE *f = fopen("7.txt", "a");
-	fprintf(f,"%d %d %d %d\n",st_clt->nstrt,st_clt->nsize,st_clt->ndpth,st_clt->nnson);
-	fclose(f);
-      }
       if(ndpth > depth_max){
 	depth_max = ndpth;
       }

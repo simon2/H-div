@@ -9,7 +9,7 @@
 #include <cilk/reducer_opadd.h>
 #include <cilk/reducer_min_max.h>
 
-#define CHUNK_SIZE 5
+#define CHUNK_SIZE 2500
 
 /*********define cluster************/
 typedef struct cluster cluster;
@@ -46,11 +46,12 @@ void random(int *lod,int nd);
 int contains(int *lod, int n, int x);
 
 cluster * create_ctree_ssgeom(cluster *st_clt,double (*zgmid)[3],double param[],int *lod,int ndpth,int ndscd,int nsrt,int nd,int md,int ndim,int nclst);
-void mm(double (*zgmid)[3],int *lod,int nd,int md, int ndim);
-void mm1(double (*zgmid)[3],int *lod,int nd,int md, int ndim);
-void mm2(double (*zgmid)[3],int *lod,int nd,int md, int ndim);
-void swap1(double (*zgmid)[3],int *lod,int nd,int md, int ndim);
-void swap2(double (*zgmid)[3],int *lod,int *templod,int nd,int md, int ndim);
+void mm(double (*zgmid)[3],int nd,int md, int ndim);
+void mm1(double (*zgmid)[3],int nd,int md, int ndim);
+void mm2(double (*zgmid)[3],int nd,int md, int ndim);
+void swap1(double (*zgmid)[3],int nd,int md, int ndim);
+void swap2(double (*zgmid)[3],double (*tempzgmid)[3],int nd,int md, int ndim);
+void random_d(double (*zgmid)[3],int nd);
 double get_wall_time();
 double get_cpu_time();
 
@@ -166,30 +167,32 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   int nclst = 0;
   int ndpth = 0;
   int ndscd = 0;
-
+  double (*tempgmid)[3];
+  tempgmid = (double(*)[3])malloc(nofc*3*sizeof(double));
   double start,end,spent;
-  random(lodfc,ndf);
+  random_d(gmid,ndf);
 
   start = get_wall_time();
-  //swap1(gmid,lodfc,ndf,nofc,ndim);
-  swap2(gmid,lodfc,templod,ndf,nofc,ndim);
+  //swap1(gmid,ndf,nofc,ndim);
+  swap2(gmid,tempgmid,ndf,nofc,ndim);
+  //mm(gmid,ndf,nofc, ndim); 
   end = get_wall_time();
   spent = end - start;
   //printf("sequtial time spent:%lf\n",spent);
   start = get_wall_time();
-  /*mm1(gmid,lodfc,ndf,nofc, ndim);
+  //mm1(gmid,lodfc,ndf,nofc, ndim);
   end = get_wall_time();
   spent = end - start;
-  printf("jump access parallelization time spent:%.10f\n",spent);
+  //printf("jump access parallelization time spent:%.10f\n",spent);
   start = get_wall_time();
-  mm2(gmid,lodfc,ndf,nofc, ndim);
+  //mm2(gmid,ndf,nofc, ndim);
   end = get_wall_time();
   spent = end - start;
-  printf("succession access parallelization time spent:%.10f\n",spent);*/
+  //printf("succession access parallelization time spent:%.10f\n",spent);
 }
 
 
-void mm1(double (*zgmid)[3],int *lod,int nd,int md, int ndim){
+void mm1(double (*zgmid)[3],int nd,int md, int ndim){
   int id,il;
   double zlmin[ndim],zlmax[ndim];
   CILK_C_REDUCER_MAX(max,double,-10.1);
@@ -200,8 +203,8 @@ void mm1(double (*zgmid)[3],int *lod,int nd,int md, int ndim){
     REDUCER_VIEW(min) = 10.1;
     REDUCER_VIEW(max) = -10.1;
     _Cilk_for(il=0;il<nd;il++){
-      CILK_C_REDUCER_MIN_CALC(min,zgmid[lod[il]][id]);
-      CILK_C_REDUCER_MAX_CALC(max,zgmid[lod[il]][id]);
+      CILK_C_REDUCER_MIN_CALC(min,zgmid[il][id]);
+      CILK_C_REDUCER_MAX_CALC(max,zgmid[il][id]);
     }
     zlmin[id] = REDUCER_VIEW(min);
     zlmax[id] = REDUCER_VIEW(max);
@@ -213,14 +216,14 @@ void mm1(double (*zgmid)[3],int *lod,int nd,int md, int ndim){
   }
 }
 
-void mm(double (*zgmid)[3],int *lod,int nd,int md, int ndim){
+void mm(double (*zgmid)[3],int nd,int md, int ndim){
   int id,il;
   double zlmin[ndim],zlmax[ndim];
   for(id=0;id<ndim;id++){
-    zlmin[id] = zgmid[lod[0]][id];
+    zlmin[id] = zgmid[0][id];
     zlmax[id] = zlmin[id];
     for(il=1;il<nd;il++){
-      double zg = zgmid[lod[il]][id];
+      double zg = zgmid[il][id];
       if(zg < zlmin[id]){
         zlmin[id] = zg;
       }else if(zlmax[id] < zg){
@@ -228,16 +231,19 @@ void mm(double (*zgmid)[3],int *lod,int nd,int md, int ndim){
       }
     }
   }
+  for(id=0;id<ndim;id++){
+    printf("%lf %lf\n",zlmin[id],zlmax[id]);
+  }
 }
 
-void swap1(double (*zgmid)[3],int *lod,int nd,int md, int ndim){
+void swap1(double (*zgmid)[3],int nd,int md, int ndim){
   int id,il;
   double zlmin[ndim],zlmax[ndim];
   for(id=0;id<ndim;id++){
-    zlmin[id] = zgmid[lod[0]][id];
+    zlmin[id] = zgmid[0][id];
     zlmax[id] = zlmin[id];
     for(il=1;il<nd;il++){
-      double zg = zgmid[lod[il]][id];
+      double zg = zgmid[il][id];
       if(zg < zlmin[id]){
         zlmin[id] = zg;
       }else if(zlmax[id] < zg){
@@ -255,21 +261,24 @@ void swap1(double (*zgmid)[3],int *lod,int nd,int md, int ndim){
       ncut = id;
     }
   }
+
   double zlmid = 0.5 * (zlmax[ncut] + zlmin[ncut]);
   int nl = 0;
   int nr = nd-1;
   double start = get_wall_time();
   while(nl < nr){
-    while(nl < nd && zgmid[lod[nl]][ncut] <= zlmid){
+    while(nl < nd && zgmid[nl][ncut] <= zlmid){
       nl = nl + 1;
     }
-    while(nr >= 0 && zgmid[lod[nr]][ncut] > zlmid){
+    while(nr >= 0 && zgmid[nr][ncut] > zlmid){
       nr = nr - 1;
     }
     if(nl < nr){
-      int nh = lod[nl];
-      lod[nl] = lod[nr];
-      lod[nr] = nh;
+      for(id=0;id<ndim;id++){
+	double nh = zgmid[nl][id];
+	zgmid[nl][id] = zgmid[nr][id];
+	zgmid[nr][id] = nh;
+      }
     }
   }
   double end = get_wall_time();
@@ -277,7 +286,7 @@ void swap1(double (*zgmid)[3],int *lod,int nd,int md, int ndim){
   printf("sequtial time spent:%lf\n",spent);
 }
 
-void swap2(double (*zgmid)[3],int *lod,int *templod,int nd,int md, int ndim){
+void swap2(double (*zgmid)[3],double (*tempzgmid)[3],int nd,int md, int ndim){
   int id,il;
   double zlmin[ndim],zlmax[ndim];
   CILK_C_REDUCER_MAX(max_x,double,-10.1);
@@ -294,12 +303,12 @@ void swap2(double (*zgmid)[3],int *lod,int *templod,int nd,int md, int ndim){
   CILK_C_REGISTER_REDUCER(min_z);
 #pragma cilk grainsize = 128
   _Cilk_for(il=0;il<nd;il++){
-    CILK_C_REDUCER_MIN_CALC(min_x,zgmid[lod[il]][0]);
-    CILK_C_REDUCER_MAX_CALC(max_x,zgmid[lod[il]][0]);
-    CILK_C_REDUCER_MIN_CALC(min_y,zgmid[lod[il]][1]);
-    CILK_C_REDUCER_MAX_CALC(max_y,zgmid[lod[il]][1]);
-    CILK_C_REDUCER_MIN_CALC(min_z,zgmid[lod[il]][2]);
-    CILK_C_REDUCER_MAX_CALC(max_z,zgmid[lod[il]][2]);
+    CILK_C_REDUCER_MIN_CALC(min_x,zgmid[il][0]);
+    CILK_C_REDUCER_MAX_CALC(max_x,zgmid[il][0]);
+    CILK_C_REDUCER_MIN_CALC(min_y,zgmid[il][1]);
+    CILK_C_REDUCER_MAX_CALC(max_y,zgmid[il][1]);
+    CILK_C_REDUCER_MIN_CALC(min_z,zgmid[il][2]);
+    CILK_C_REDUCER_MAX_CALC(max_z,zgmid[il][2]);
   }
   zlmin[0] = REDUCER_VIEW(min_x);
   zlmax[0] = REDUCER_VIEW(max_x);
@@ -340,11 +349,11 @@ void swap2(double (*zgmid)[3],int *lod,int *templod,int nd,int md, int ndim){
   }
 
   _Cilk_for(id=0;id<gn;id++){
-    long long start = (long long)id*nd/gn;
-    long long end = (long long)(id+1)*nd/gn;
-    long long im;
+    long start = (long)id*nd/gn;
+    long end = (long)(id+1)*nd/gn;
+    long im;
     for(im=start;im<end;im++){
-      if(zgmid[lod[im]][ncut]<=zlmid){
+      if(zgmid[im][ncut]<=zlmid){
 	lessNum[id]++;
       }else{
 	moreNum[id]++;
@@ -366,15 +375,20 @@ void swap2(double (*zgmid)[3],int *lod,int *templod,int nd,int md, int ndim){
     free(lessNum);
     
     _Cilk_for(id=0;id<gn;id++){
-      long long start = (long long)id*nd/gn;
-      long long end = (long long)(id+1)*nd/gn;
-      long long im;
+      long start = (long)id*nd/gn;
+      long end = (long)(id+1)*nd/gn;
+      long im;
+      int ik;
       for(im=start;im<end;im++){
-	if(zgmid[lod[im]][ncut]<=zlmid){
-	  templod[lessStart[id]] = lod[im];
+	if(zgmid[im][ncut]<=zlmid){
+	  for(ik=0;ik<ndim;ik++){
+	    tempzgmid[lessStart[id]][ik] = zgmid[im][ik];
+	  }
 	  lessStart[id]++;
 	}else{
-	  templod[moreStart[id]] = lod[im];
+	  for(ik=0;ik<ndim;ik++){
+            tempzgmid[moreStart[id]][ik] = zgmid[im][ik];
+          }
 	  moreStart[id]++;
 	}
       }
@@ -389,16 +403,31 @@ void swap2(double (*zgmid)[3],int *lod,int *templod,int nd,int md, int ndim){
 
 void random(int *lod,int nd){
   int i, j;
-  int a,b;
+  int a;
 
   srand(time(NULL));
 
   for (i = 0; i < nd; i++) {
       a = rand() % nd;
-      b = rand() % nd;
       int temp = lod[a];
-      lod[a] = lod[b];
-      lod[b] = temp;
+      lod[a] = lod[i];
+      lod[i] = temp;
+  }
+}
+
+void random_d(double (*zgmid)[3],int nd){
+  int i,j;
+  int a;
+
+  srand(1);
+
+  for(i=0;i<nd;i++){
+    a = rand() % nd;
+    for(j=0;j<3;j++){
+      double temp = zgmid[a][j];
+      zgmid[a][j] = zgmid[i][j];
+      zgmid[i][j] = temp;
+    }
   }
 }
 
@@ -411,7 +440,7 @@ int contains(int *lod, int n, int x)
 }
 
 
-void mm2(double (*zgmid)[3],int *lod,int nd,int md, int ndim){
+void mm2(double (*zgmid)[3],int nd,int md, int ndim){
   int il,id;
   double zlmin[ndim],zlmax[ndim];
   CILK_C_REDUCER_MAX(max_x,double,-10.1);
@@ -428,12 +457,12 @@ void mm2(double (*zgmid)[3],int *lod,int nd,int md, int ndim){
   CILK_C_REGISTER_REDUCER(min_z);
 #pragma cilk grainsize = 128
   _Cilk_for(il=0;il<nd;il++){
-    CILK_C_REDUCER_MIN_CALC(min_x,zgmid[lod[il]][0]);
-    CILK_C_REDUCER_MAX_CALC(max_x,zgmid[lod[il]][0]);
-    CILK_C_REDUCER_MIN_CALC(min_y,zgmid[lod[il]][1]);
-    CILK_C_REDUCER_MAX_CALC(max_y,zgmid[lod[il]][1]);
-    CILK_C_REDUCER_MIN_CALC(min_z,zgmid[lod[il]][2]);
-    CILK_C_REDUCER_MAX_CALC(max_z,zgmid[lod[il]][2]);
+    CILK_C_REDUCER_MIN_CALC(min_x,zgmid[il][0]);
+    CILK_C_REDUCER_MAX_CALC(max_x,zgmid[il][0]);
+    CILK_C_REDUCER_MIN_CALC(min_y,zgmid[il][1]);
+    CILK_C_REDUCER_MAX_CALC(max_y,zgmid[il][1]);
+    CILK_C_REDUCER_MIN_CALC(min_z,zgmid[il][2]);
+    CILK_C_REDUCER_MAX_CALC(max_z,zgmid[il][2]);
   }
   zlmin[0] = REDUCER_VIEW(min_x);
   zlmax[0] = REDUCER_VIEW(max_x);
