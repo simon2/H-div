@@ -199,7 +199,8 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   fclose(f);*/
 
   ndpth = 0;
-
+  free(tempgmid);
+  free(gmid);
   /*****count number of leafmatrices*****/
   count_lntmx(st_clt,st_clt,param,lnmtx,nffc);
 
@@ -223,7 +224,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   }
 
   lel = nlf/nworkers*3;
-  leafmtx *restrict temp_leafmtx = (leafmtx *)malloc(nworkers*lel*sizeof(leafmtx));
+  leafmtx *restrict temp_leafmtx = (leafmtx *)malloc(nworkers * lel * sizeof(leafmtx));
   
   int sum = 0;
   start = get_wall_time();
@@ -373,55 +374,47 @@ int med3(int nl,int nr,int nlr2){
 
 void create_leafmtx(leafmtx *restrict temp_leafmtx,cluster *st_cltl,cluster *st_cltt,
                     double param[],int *lnmtx,int nffc,int nlf){
-  int ndl = st_cltl->nsize * nffc;
-  int ndt = st_cltt->nsize * nffc;
-  int nstrtl = st_cltl->nstrt;
-  int nstrtt = st_cltt->nstrt;
-  int nnsonl = st_cltl->nnson;
-  int nnsont = st_cltt->nnson;
-  int st_cltl_depth = st_cltl->ndpth;
-  int st_cltt_depth = st_cltt->ndpth;
-  int il,it;
-  int my_num = __cilkrts_get_worker_number();
-
   double nleaf = param[41];
   double zeta = param[51];
   double zdistlt = dist_2cluster(st_cltl,st_cltt);
 
-  if((st_cltl->zwdth * zeta <= zdistlt || st_cltt->zwdth * zeta <= zdistlt) && (ndl >= nleaf && ndt >= nleaf)){
+  if((st_cltl->zwdth * zeta <= zdistlt || st_cltt->zwdth * zeta <= zdistlt)&&(st_cltl->nsize*nffc >= nleaf && st_cltt->nsize*nffc >= nleaf)){
+    int my_num = __cilkrts_get_worker_number();
     int lnlf = countlist[my_num];
     leafmtx (* restrict a)[nlf] = (leafmtx(*)[nlf])&temp_leafmtx[0];
-    a[my_num][lnlf].nstrtl = nstrtl;
-    a[my_num][lnlf].ndl = ndl;
-    a[my_num][lnlf].nstrtt = nstrtt;
-    a[my_num][lnlf].ndt = ndt;
+    a[my_num][lnlf].nstrtl = st_cltl->nstrt;
+    a[my_num][lnlf].ndl = st_cltl->nsize;
+    a[my_num][lnlf].nstrtt = st_cltt->nstrt;
+    a[my_num][lnlf].ndt = st_cltt->nsize;
     a[my_num][lnlf].kt = 0;
     a[my_num][lnlf].ltmtx = 1;
-
+    
     countlist[my_num] = countlist[my_num] + 1;
-
-  }else if(nnsonl == 0 || nnsont == 0 || ndl <= nleaf || ndt <= nleaf){
+    
+  }else if(st_cltl->nnson == 0 || st_cltt->nnson == 0 || st_cltl->nsize*nffc <= nleaf || st_cltt->nsize*nffc <= nleaf){
+    int my_num = __cilkrts_get_worker_number();
     int lnlf = countlist[my_num];
     leafmtx (* restrict a)[nlf] = (leafmtx(*)[nlf])&temp_leafmtx[0];
-    a[my_num][lnlf].nstrtl = nstrtl;
-    a[my_num][lnlf].ndl = ndl;
-    a[my_num][lnlf].nstrtt = nstrtt;
-    a[my_num][lnlf].ndt = ndt;
+    a[my_num][lnlf].nstrtl = st_cltl->nstrt;
+    a[my_num][lnlf].ndl = st_cltl->nsize;
+    a[my_num][lnlf].nstrtt = st_cltt->nstrt;
+    a[my_num][lnlf].ndt = st_cltt->nsize;
     a[my_num][lnlf].kt = 0;
     a[my_num][lnlf].ltmtx = 2;
 
     countlist[my_num] = countlist[my_num] + 1;
-
+    
   }else{
-    if(st_cltl_depth < 8 && st_cltt_depth < 8){
-      _Cilk_for(il=0;il<nnsonl;il++){
-	_Cilk_for(it=0;it<nnsont;it++){
+    int il,it;
+    if(st_cltl->ndpth < 16 && st_cltt->ndpth < 16){
+      _Cilk_for(il=0;il<st_cltl->nnson;il++){
+	_Cilk_for(it=0;it<st_cltt->nnson;it++){
 	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[il],st_cltt->pc_sons[it],param,lnmtx,nffc,nlf);
 	}
       }
     }else{
-      for(il=0;il<nnsonl;il++){
-        for(it=0;it<nnsont;it++){
+      for(il=0;il<st_cltl->nnson;il++){
+        for(it=0;it<st_cltt->nnson;it++){
           create_leafmtx(temp_leafmtx,st_cltl->pc_sons[il],st_cltt->pc_sons[it],param,lnmtx,nffc,nlf);
         }
       }
@@ -436,7 +429,7 @@ double dist_2cluster(cluster *st_cltl,cluster *st_cltt){
     if(st_cltl->bmax[id] < st_cltt->bmin[id]){
       zs = zs + (st_cltt->bmin[id] - st_cltl->bmax[id]) * (st_cltt->bmin[id] - st_cltl->bmax[id]);
     }else if(st_cltt->bmax[id]< st_cltl->bmin[id]){
-      zs = zs+ (st_cltl->bmin[id] - st_cltt->bmax[id]) * (st_cltl->bmin[id] - st_cltt->bmax[id]);
+      zs = zs + (st_cltl->bmin[id] - st_cltt->bmax[id]) * (st_cltl->bmin[id] - st_cltt->bmax[id]);
     }
   }
   return sqrt(zs);
@@ -760,7 +753,6 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
 	  nr = nr - 1;
 	}
 	if(nl < nr){
-#pragma simd
 	  for(id=0;id<ndim;id++){
 	    double nh = zgmid[nl][id];
 	    zgmid[nl][id] = zgmid[nr][id];
