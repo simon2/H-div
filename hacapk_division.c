@@ -177,7 +177,11 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
   fclose(f);*/
 
   ndpth = 0;
+  start = get_wall_time();
   count_lntmx(st_clt,st_clt,param,lnmtx,nffc);
+  end = get_wall_time();
+  spent = end - start;
+  printf("count time:%.10f\n",spent);
 
   st_leafmtxp->nlfkt = lnmtx[0];
   int nlf = lnmtx[0] + lnmtx[1];

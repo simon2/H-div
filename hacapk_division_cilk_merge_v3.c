@@ -206,7 +206,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   st_leafmtx = (leafmtx **)malloc(nlf*sizeof(leafmtx*));
   st_leafmtxp->nlf = nlf;
   printf("nlf:%d\n",nlf);
-  
+  //int *countlist = (int *)malloc(400*sizeof(int));   
   for(i=0;i<500;i++){
     ncall[i] = 0;
   }
@@ -215,7 +215,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
     ntime[1][i] = 0.0;
   }
 
-  for(i=0;i<36;i++){
+  for(i=0;i<400;i++){
     countlist[i] = 0;
   }
 
@@ -410,7 +410,7 @@ void create_leafmtx(leafmtx *restrict temp_leafmtx,cluster *st_cltl,cluster *st_
     countlist[my_num] = countlist[my_num] + 1;
 
   }else{
-    if(st_cltl_depth < 8 && st_cltt_depth < 8){
+    if(st_cltl_depth < 16 && st_cltt_depth < 16){
       _Cilk_for(il=0;il<nnsonl;il++){
 	_Cilk_for(it=0;it<nnsont;it++){
 	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[il],st_cltt->pc_sons[it],param,lnmtx,nffc,nlf);
