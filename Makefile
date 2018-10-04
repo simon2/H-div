@@ -1,5 +1,5 @@
 CC=icc
-COPT=-std=c99 -O3
+COPT=-std=c99 -O3 -xavx2
 COPT_OMP=-qopenmp
 
 TARGETS = \
@@ -42,4 +42,10 @@ hacapk_division_omp: hacapk_division_omp.c
 
 # Sequential
 hacapk_division: hacapk_division.c
+	$(CC) $(COPT) -o $@ $<
+
+# Sequential (SC version)
+hmat.c: hmat.sc
+	sc2c $<
+hmat: hmat.c
 	$(CC) $(COPT) -o $@ $<
