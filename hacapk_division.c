@@ -39,8 +39,8 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,double (*gmid)[
 void qsort_col_leafmtx(leafmtx *st_leafmtx,int first,int last);
 void qsort_row_leafmtx(leafmtx *st_leafmtx,int first,int last);
 int med3(int nl,int nr,int nlr2);
-void create_leafmtx(leafmtx *st_leafmtx,cluster *stcltl,cluster *st_cltt,double param[],int *lnmtx,int nffc,int *nlf);
-double dist_2cluster(cluster *st_cltl,cluster *stcltt);
+void create_leafmtx(leafmtx *st_leafmtx,cluster *st_cltl,cluster *st_cltt,double param[],int *lnmtx,int nffc,int *nlf);
+double dist_2cluster(cluster *st_cltl,cluster *st_cltt);
 void count_lntmx(cluster *st_cltl,cluster *st_cltt,double param[],int *lnmtx,int nffc);
 void cal_bndbox_cog(cluster *st_clt,double (*zgmid)[3],int *lod,int nofc);
 void set_bndbox_cog(cluster *st_clt,double (*zgmid)[3],int *lod,int nofc);
