@@ -7,7 +7,7 @@
 (c-exp "#include <math.h>")
 (c-exp "#include <time.h>")
 (c-exp "#include <sys/time.h>")
-(%defconstant INPUT_DEFAULT "../bem_data/input_50ms.txt")
+(%defconstant INPUT_DEFAULT "../bem_data/input_10ms.txt")
 
 ;; *********define cluster************
 (deftype cluster (struct cluster))
@@ -95,7 +95,6 @@
   (def i2 int :in))
 
 (def (task-body create-leafmtx)
-  (csym::fprintf stderr "%ld~% start!" WORKER-ID)
   (create_leafmtx this.st-cltl this.st-cltt this.i1 this.i2))
 
 (def (task start-up)
@@ -328,7 +327,6 @@
   (def nleaf double (aref param 41))
   (def zeta double (aref param 51))
   (def zdistlt double (dist-2cluster st-cltl st-cltt))
-
   (if (and (or (<= (* (fref (mref st-cltl) zwdth) zeta) zdistlt)
                (<= (* (fref (mref st-cltt) zwdth) zeta) zdistlt))
            (and (>= ndl nleaf) (>= ndt nleaf)))
@@ -350,11 +348,11 @@
               (= (fref (aref WDATA.leafnode-list WDATA.nlf) ltmtx) 2)
               (= WDATA.nlf (+ WDATA.nlf 1)))
             (begin
-              (do-many for (ia from i1 to i2)
+              (do-many for ia from i1 to i2
 		(= il (/ ia nnsont))
 		(= it (% ia nnsont))
 		(decl al int)
-		(= al (* (fref (aref (fref (mref st-cltl) pc-sons) il) nnson) (fref (aref (fref (mref st-cltt) pc-sons) it) nnson)))
+		(= al (* (fref (aref (fref st-cltl -> pc-sons) il) -> nnson) (fref (aref (fref st-cltt -> pc-sons) it) -> nnson)))
 		(create-leafmtx (aref (fref (mref st-cltl) pc-sons) il) (aref (fref (mref st-cltt) pc-sons) it) 0 al)
 		(handles create-leafmtx
 		  (:put from j1 to j2
