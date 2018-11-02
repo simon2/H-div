@@ -333,6 +333,7 @@ void create_leafmtx(leafmtx *st_leafmtx,cluster *st_cltl,cluster *st_cltt,
       st_leafmtx[*nlf].ltmtx = 2;
       *nlf = *nlf + 1;
     }else{
+      printf("%ld\n");
       for(il=0;il<nnsonl;il++){
         for(it=0;it<nnsont;it++){
           create_leafmtx(st_leafmtx,st_cltl->pc_sons[il],st_cltt->pc_sons[it],param,lnmtx,nffc,nlf);
