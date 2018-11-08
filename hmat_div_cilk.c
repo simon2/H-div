@@ -252,7 +252,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   printf("sum:%d\n",sum);
 
   for(i=0;i<nworkers;i++){
-    printf("%d,",conn[i][0]);
+    printf("%ld,",countlist[i]/*conn[i][0]*/);
   }
   printf("\n");
   /*printf("\n");
@@ -398,7 +398,7 @@ void create_leafmtx(cluster *st_cltl,cluster *st_cltt){
 
   if((st_cltl->zwdth * zeta <= zdistlt || st_cltt->zwdth * zeta <= zdistlt) && (st_cltl->nsize * nffc >= nleaf && st_cltt->nsize * nffc >= nleaf)){
     int my_num = __cilkrts_get_worker_number();    
-    int lnlf = conn[my_num][0];
+    int lnlf = countlist[my_num];//conn[my_num][0];
     //leafmtx (* restrict a)[nlf] = (leafmtx(*)[nlf])&temp_leafmtx[0];
     temp_leafmtx[my_num][lnlf].nstrtl = st_cltl->nstrt;
     temp_leafmtx[my_num][lnlf].ndl = st_cltl->nsize * nffc;
@@ -408,11 +408,10 @@ void create_leafmtx(cluster *st_cltl,cluster *st_cltt){
     temp_leafmtx[my_num][lnlf].ltmtx = 1;
 
     //conn[my_num][0]++;
-    REDUCE_VIEW(sum) += 1;
-
+    countlist[my_num]++;
   }else if(st_cltl->nnson == 0 || st_cltt->nnson == 0 || st_cltl->nsize * nffc <= nleaf || st_cltt->nsize * nffc <= nleaf){
     int my_num = __cilkrts_get_worker_number();
-    int lnlf = conn[my_num][0];
+    int lnlf = countlist[my_num];//conn[my_num][0];
     //leafmtx (* restrict a)[nlf] = (leafmtx(*)[nlf])&temp_leafmtx[0];
     temp_leafmtx[my_num][lnlf].nstrtl = st_cltl->nstrt;
     temp_leafmtx[my_num][lnlf].ndl = st_cltl->nsize * nffc;
@@ -422,9 +421,9 @@ void create_leafmtx(cluster *st_cltl,cluster *st_cltt){
     temp_leafmtx[my_num][lnlf].ltmtx = 2;
 
     //conn[my_num][0]++;
-    REDUCE_VIEW(sum) +=1;
+    countlist[my_num];
   }else{
-    if(st_cltl->ndpth < 40 && st_cltt->ndpth < 40){
+    if(st_cltl->ndpth < 16 && st_cltt->ndpth < 16){
       int il;
       cilk_for(il=0;il<st_cltl->nnson;il++){
 	int it;

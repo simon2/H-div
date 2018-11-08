@@ -415,7 +415,7 @@ void create_leafmtx(leafmtx *restrict temp_leafmtx,cluster *st_cltl,cluster *st_
     countlist[my_num] = countlist[my_num] + 1;
 
   }else{
-    if(st_cltl->ndpth < 16 && st_cltt->ndpth < 16){
+    //if(st_cltl->ndpth < 16 && st_cltt->ndpth < 16){
       int il;
       cilk_for(il=0;il<st_cltl->nnson;il++){
 	int it;
@@ -423,7 +423,7 @@ void create_leafmtx(leafmtx *restrict temp_leafmtx,cluster *st_cltl,cluster *st_
           create_leafmtx(temp_leafmtx,st_cltl->pc_sons[il],st_cltt->pc_sons[it],param,lnmtx,nffc,nlf);
         }
       }
-    }else{
+      /*}else{
       int il;
       for(il=0;il<st_cltl->nnson;il++){
 	int it;
@@ -431,7 +431,7 @@ void create_leafmtx(leafmtx *restrict temp_leafmtx,cluster *st_cltl,cluster *st_
           create_leafmtx(temp_leafmtx,st_cltl->pc_sons[il],st_cltt->pc_sons[it],param,lnmtx,nffc,nlf);
         }
       }
-    }
+      }*/
   }
 }
 
