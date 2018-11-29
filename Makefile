@@ -3,6 +3,7 @@ COPT=-std=c99 -O3 -xavx2
 COPT_OMP=-qopenmp
 
 TARGETS = \
+hmat_div \
 hacapk_division \
 hacapk_division_cilk \
 hacapk_division_cilk_lock \
@@ -14,6 +15,10 @@ hacapk_division_omp
 .phony: all
 
 all: $(TARGETS)
+
+# Serial version
+hmat_div: hmat_div.c data/bem_file.c
+	$(CC) $(COPT) -o $@ $^
 
 # Changed the nesting order of the parallel loops for finding min/max.
 # ("loop over particles -> loop over dimensions" in this version)
