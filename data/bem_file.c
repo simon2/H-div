@@ -262,7 +262,7 @@ enum bi_format read_bem_input (FILE* fp, struct bem_input* pbin, enum bi_format 
   pbin->coordOfFace = (double(*)[3]) malloc (pbin->nFace * 3 * sizeof(double));
   for(long i=0; i < pbin->nFace; i++){
     const long ncpf = pbin->nNodePerFace;
-    const double (*con)[3] = pbin->coordOfNode;
+    double (* const con)[3] = pbin->coordOfNode;
     // Initialize coordOfFace
     pbin->coordOfFace[i][0] = pbin->coordOfFace[i][1] = pbin->coordOfFace[i][2] = 0.0;
     // Sum up all coordinates of the i-th face

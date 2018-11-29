@@ -1,4 +1,4 @@
-CC=gcc -O2
+CC=gcc -O2 -std=c99
 
 .PHONY: all
 .SUFFIXES: .c .o
