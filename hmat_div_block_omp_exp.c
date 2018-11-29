@@ -51,10 +51,8 @@ cluster * create_ctree_ssgeom(cluster *st_clt,double (*zgmid)[3],double param[],
 double get_wall_time();
 double get_cpu_time();
 
-#define N_COUNTLIST 500000
-int Countlist_offset = 1;
-int ncall[N_COUNTLIST];
-int countlist[N_COUNTLIST];
+int ncall[500];
+int countlist[500];
 double ntime[2][36];
 
 int main(int argc, char **argv){
@@ -71,8 +69,6 @@ int main(int argc, char **argv){
   int i;
   double (*coordOfNode)[3];
   double (*coordOfFace)[3];
-  Countlist_offset = (argc>=4)?atoi(argv[3]):1;
-  if (Countlist_offset < 1) Countlist_offset = 1;
   fname = (argc >= 3)?argv[2]:INPUT_DEFAULT;
   file = fopen(fname,"r");
   if(file == NULL){
@@ -193,7 +189,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   
   int nthreads = omp_get_max_threads();
   //int *countlist;
-  for(i=0;i<N_COUNTLIST;i+=Countlist_offset){
+  for(i=0;i<500;i++){
     ncall[i] = 0;
   }
   for(i=0;i<36;i++){
@@ -201,7 +197,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
     ntime[1][i] = 0.0;
   }
   //countlist = (int *)malloc(nworkers*sizeof(int));
-  for(i=0;i<N_COUNTLIST;i+=Countlist_offset){
+  for(i=0;i<36;i++){
     countlist[i] = 0;
   }
   lel = nlf;
@@ -215,20 +211,20 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   
   for(i=0;i<nthreads;i++){
     int st = i * lel;
-    for(j=0;j<countlist[i*Countlist_offset];j++){
+    for(j=0;j<countlist[i];j++){
       st_leafmtx[sum+j] = &temp_leafmtx[st+j];
     }
-    sum += countlist[i*Countlist_offset];
+    sum += countlist[i];
   }
   printf("block cluster tree time spent:%.10f\n",spent);
   printf("sum:%d\n",sum);
 
-  for(i=0;i<nthreads;i+=Countlist_offset){
+  for(i=0;i<nthreads;i++){
     printf("%d,",countlist[i]);
   }
   printf("\n");
   printf("\n");
-  for(i=0;i<nthreads;i+=Countlist_offset){
+  for(i=0;i<nthreads;i++){
     printf("%d,",ncall[i]);
   }
   printf("\n");
@@ -362,22 +358,22 @@ void create_leafmtx(leafmtx *temp_leafmtx,cluster *st_cltl,cluster *st_cltt,
   double zdistlt = dist_2cluster(st_cltl,st_cltt);
 
   if((st_cltl->zwdth * zeta <= zdistlt || st_cltt->zwdth * zeta <= zdistlt) && (ndl >= nleaf && ndt >= nleaf)){
-    int my_nlf = my_num*nlf + countlist[my_num*Countlist_offset];
+    int my_nlf = my_num*nlf + countlist[my_num];
     temp_leafmtx[my_nlf].nstrtl = nstrtl;
     temp_leafmtx[my_nlf].ndl = ndl;
     temp_leafmtx[my_nlf].nstrtt = nstrtt;
     temp_leafmtx[my_nlf].ndt = ndt;
     temp_leafmtx[my_nlf].kt = 0;
     temp_leafmtx[my_nlf].ltmtx = 1;
-    countlist[my_num*Countlist_offset]++;
+    countlist[my_num] = countlist[my_num] + 1;
   }else if(nnsonl == 0 || nnsont == 0 || ndl <= nleaf || ndt <= nleaf){
-    int my_nlf = my_num*nlf + countlist[my_num*Countlist_offset];
+    int my_nlf = my_num*nlf + countlist[my_num];
     temp_leafmtx[my_nlf].nstrtl = nstrtl;
     temp_leafmtx[my_nlf].ndl = ndl;
     temp_leafmtx[my_nlf].nstrtt = nstrtt;
     temp_leafmtx[my_nlf].ndt = ndt;
     temp_leafmtx[my_nlf].ltmtx = 2;
-    countlist[my_num*Countlist_offset]++;
+    countlist[my_num] = countlist[my_num] + 1;
   }else{
     if(st_cltl_depth == 1){
 #pragma omp parallel
