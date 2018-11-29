@@ -225,7 +225,7 @@ enum bi_format read_bem_input (FILE* fp, struct bem_input* pbin, enum bi_format 
       char buf[bufsz]; // BI_BINARY_PREAMBLE + \n + \0
       fgets (buf, bufsz, fp);
       if ( strncmp(buf, BI_BINARY_PREAMBLE "\n", bufsz) ) {
-	fprintf (stderr, "This file does not look a BEM input file in the binary format in read_bem_input!\n",buf);
+	fprintf (stderr, "This file does not look a BEM input file in the binary format in read_bem_input!\n");
 	return -1;
       }
       if (fmt == BI_AUTO) {
