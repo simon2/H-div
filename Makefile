@@ -39,6 +39,8 @@ hacapk_division_cilk_lock: hacapk_division_cilk_lock.c
 # Parallelized the 1st level of cnst. BC tree by OpenMP (only for experiments)
 hacapk_division_omp: hacapk_division_omp.c
 	$(CC) $(COPT) $(COPT_OMP) -o $@ $<
+hmat_div_block_omp_exp: hmat_div_block_omp_exp.c
+	$(CC) $(COPT) $(COPT_OMP) -o $@ $<
 
 # Sequential
 hacapk_division: hacapk_division.c

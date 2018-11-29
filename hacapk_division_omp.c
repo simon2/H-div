@@ -215,21 +215,21 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   
   for(i=0;i<nthreads;i++){
     int st = i * lel;
-    for(j=0;j<countlist[i*Countlist_offset];j++){
+    for(j=0;j<countlist[i];j++){
       st_leafmtx[sum+j] = &temp_leafmtx[st+j];
     }
-    sum += countlist[i*Countlist_offset];
+    sum += countlist[i];
   }
   printf("block cluster tree time spent:%.10f\n",spent);
   printf("sum:%d\n",sum);
 
-  for(i=0;i<nthreads;i+=Countlist_offset){
+  for(i=0;i<nthreads;i++){
     printf("%d,",countlist[i]);
   }
   printf("\n");
   printf("\n");
-  for(i=0;i<nthreads;i+=Countlist_offset){
-    printf("%d,",ncall[i]);
+  for(i=0;i<nthreads;i++){
+    printf("%d,",ncall[i*Countlist_offset]);
   }
   printf("\n");
   printf("\n");
