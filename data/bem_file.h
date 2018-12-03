@@ -1,6 +1,7 @@
 enum bi_format {
   BI_TEXT,      // oroginal text format
   BI_BINARY,    // binary format
+  BI_VTK,       // vtk text format (only for print, for visualising using ParaView)
   BI_PRETTY,    // pretty print (only for print)
   BI_AUTO,      // automatic select (only for read)
 };
