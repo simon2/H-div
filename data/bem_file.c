@@ -7,7 +7,13 @@
 
 #define BUFSIZE 10000
 #define BI_BINARY_PREAMBLE "BI_BINARY"
-
+#define BI_VTK_PREAMBLE \
+  "# vtk DataFile Version 2.0\n" \
+  "header : this data is results of BEM-BB\n" \
+  "ASCII\n" \
+  "DATASET UNSTRUCTURED_GRID"
+#define BI_VTK_CELL_TYPE "5"
+#define BI_VTK_PPOHBEM_SOL 0.0
 
 /* For debugging */
 void print_longs (long* vals, long nval) {
@@ -38,12 +44,18 @@ void print_bem_input_long (FILE* fp, long val,
 
 // print long values (vals)
 // nval is # of values. Put a newline after each nsep values in text formsts.
+// prt_string is printed on the head of each line (fmt==BI_VTK)
+// or printed once before the values (fmt==BI_PRETTY)
 void print_bem_input_longs (FILE* fp, long* vals, long nval, long nsep,
 			    enum bi_format fmt, const char* prt_string)
 {
   switch (fmt) {
   case BI_TEXT:
+  case BI_VTK:
     for (long i=0; i<nval; i++) {
+      if (fmt == BI_VTK && i%nsep == 0) {
+	fprintf (fp, "%ld ", nsep);
+      }
       fprintf (fp, "%ld", vals[i]);
       fputc ((i%nsep == nsep-1 || i == nval-1)?'\n':' ', fp);
     }
@@ -87,6 +99,31 @@ void print_bem_input_doubles (FILE* fp, double* vals, long nval, long nsep,
 }
 
 
+void print_bem_input_vtk (FILE* fp, struct bem_input* pbin)
+{
+  const enum bi_format fmt = BI_VTK;
+  fprintf (fp, BI_VTK_PREAMBLE "\n");
+  fprintf (fp, "POINTS %ld float\n", pbin->nNode);
+  print_bem_input_doubles (fp, (double*)pbin->coordOfNode, 3*pbin->nNode, 3,
+			   BI_TEXT, NULL);
+  fprintf (fp, "CELLS %ld %ld\n", pbin->nFace, pbin->nFace*(1+pbin->nNodePerFace));
+  print_bem_input_longs (fp, pbin->idOfFace,
+			 pbin->nNodePerFace*pbin->nFace,
+			 pbin->nNodePerFace, fmt, "");
+  fprintf (fp, "CELL_TYPES %ld\n", pbin->nFace);
+  for (int i=0; i<pbin->nFace; i++){
+    fprintf (fp, BI_VTK_CELL_TYPE "\n");
+  }
+  fprintf (fp, "CELL_DATA %ld\n", pbin->nFace);
+  fprintf (fp, "SCALARS solve float 1\n" "LOOKUP_TABLE default\n");
+  // 単に0.0でOK?
+  for (int i=0; i<pbin->nFace; i++){
+    fprintf (fp, "%lf\n", BI_VTK_PPOHBEM_SOL);
+  }
+  return;
+}
+
+
 /* Print BEM input (pbin) to (fp) in the specified format (fmt) */
 void print_bem_input (FILE* fp, struct bem_input* pbin, enum bi_format fmt)
 {
@@ -94,10 +131,16 @@ void print_bem_input (FILE* fp, struct bem_input* pbin, enum bi_format fmt)
   switch (fmt) {
   case BI_TEXT:
   case BI_BINARY:
+  case BI_VTK:
   case BI_PRETTY:
     break;
   default:
     fprintf (stderr, "Unknown bi_format in print_bem_input!\n");
+    return;
+  }
+  // Use another function for BI_VTK
+  if (fmt == BI_VTK) {
+    print_bem_input_vtk (fp, pbin);
     return;
   }
   // Write preamble for BI_BINARY
@@ -295,6 +338,7 @@ int main (void)
   FILE* fpin = fopen ("input.txt", "r");
   read_bem_input (fpin, &bem_in, BI_AUTO);
   fclose (fpin);
+#if 0
   // Pretty print
   print_bem_input (stdout, &bem_in, BI_PRETTY);
   // Write as binary file
@@ -307,5 +351,10 @@ int main (void)
   fclose (fpin_b);
   // Pretty print
   print_bem_input (stdout, &bem_in, BI_PRETTY);
+#endif
+  // Write a vti file
+  FILE* fp_vtk = fopen ("input.txt.vtk", "w");
+  print_bem_input (fp_vtk, &bem_in, BI_VTK);
+  fclose (fp_vtk);
 }
 #endif
