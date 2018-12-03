@@ -1,10 +1,14 @@
-// Convert a PPOpen BEM input file (.bin) to the text format
+// Convert a PPOpen BEM input file (.txt/.bin) to the binary/text format.
+// This can also convert the input file to the .vtk file for visualising using ParaView.
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <sys/time.h>
 #include "bem_file.h"
+
+int optind = 1;
 
 #define USAGE_STRING \
 "Usage: %s [-o <ofile_hd>] [-tbv] <ifile>\n" \
@@ -102,7 +106,7 @@ void set_options (int argc, char** argv, struct options *popt)
 // * write to the output file in the specified format (fmt)
 // * Show the elapsed time and the result text 
 void open_write_show (const int flag, struct bem_input *pbin,
-		      const enum bi_format fmt, const char *fmt_str,
+		      enum bi_format fmt, const char *fmt_str,
 		      const char* ofile)
 {
   if (flag) {
