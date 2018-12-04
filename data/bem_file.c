@@ -116,7 +116,7 @@ void print_bem_input_vtk (FILE* fp, struct bem_input* pbin)
   }
   fprintf (fp, "CELL_DATA %ld\n", pbin->nFace);
   fprintf (fp, "SCALARS solve float 1\n" "LOOKUP_TABLE default\n");
-  // 単に0.0でOK?
+  // 蜊倥↓0.0縺ｧOK?
   for (int i=0; i<pbin->nFace; i++){
     fprintf (fp, "%lf\n", BI_VTK_PPOHBEM_SOL);
   }
@@ -229,6 +229,7 @@ void read_bem_input_doubles (FILE* fp, double* vals, long nval, long nsep,
       long i=0;
       while (i<nval) {
 	fgets (line, BUFSIZE, fp);
+	// fputs (line, stderr);
 	char* pos = line;
 	char* pos_nxt;
 	for (long j = 0; i<nval && j<nsep; i++,j++) {
@@ -256,14 +257,15 @@ enum bi_format read_bem_input (FILE* fp, struct bem_input* pbin, enum bi_format 
 {
   // Check and read preamble for BI_BINARY
   if (fmt == BI_BINARY || fmt == BI_AUTO) {
-    if ( fgetc(fp) != BI_BINARY_PREAMBLE[0] ) {
+    int ch = fgetc(fp);
+    ungetc (ch, fp);
+    if ( ch != BI_BINARY_PREAMBLE[0] ) {
       if (fmt == BI_BINARY) {
 	fprintf (stderr, "This file does not look a BEM input file in the binary format in read_bem_input!\n");
 	return -1;
       }
       fmt = BI_TEXT;
     } else {
-      ungetc (BI_BINARY_PREAMBLE[0], fp);
       const int bufsz = sizeof(BI_BINARY_PREAMBLE "\n")+1;
       char buf[bufsz]; // BI_BINARY_PREAMBLE + \n + \0
       fgets (buf, bufsz, fp);
@@ -311,6 +313,12 @@ enum bi_format read_bem_input (FILE* fp, struct bem_input* pbin, enum bi_format 
     // Sum up all coordinates of the i-th face
     for (long j = 0; j<ncpf; j++) {
       long pid = pbin->idOfFace[ncpf*i+j];
+      if (pid < 0 || pid >= pbin->nNode) {
+	fprintf (stderr, "Illegal Node ID: %ld at %ld th ID of %ld th Face\n"
+		 "(# Nodes is %ld. # Faces is %ld. # nodes per face is %ld.)\n.",
+		 pid, j, i, pbin->nNode, pbin->nFace, pbin->nNodePerFace);
+	exit (99);
+      }
       pbin->coordOfFace[i][0] += con[pid][0];
       pbin->coordOfFace[i][1] += con[pid][1];
       pbin->coordOfFace[i][2] += con[pid][2];
