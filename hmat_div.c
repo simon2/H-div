@@ -5,7 +5,7 @@
 #include <sys/time.h>
 #include "data/bem_file.h"
 
-#define INPUT_DEFAULT "bem_data/input_50ms.txt"
+#define INPUT_DEFAULT "bem_data/input_10ts.txt"
 
 /*********define cluster************/
 typedef struct cluster cluster;
