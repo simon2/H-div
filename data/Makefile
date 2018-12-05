@@ -1,4 +1,4 @@
-CC=gcc -O2 -std=gnu99
+CC=gcc -O2 -g -std=gnu99
 
 .PHONY: all
 .SUFFIXES: .c .o

@@ -81,7 +81,9 @@ void set_options (int argc, char** argv, struct options *popt)
   popt->ifile = argv[optind++];
   // Set output file names.
   if (!ofile_hd) {
-    ofile_hd = popt->ifile;
+    size_t len = strlen (popt->ifile);
+    ofile_hd = malloc (sizeof(char)*(len+1));
+    strncpy (ofile_hd, popt->ifile, len+1);
   }
   {
     size_t len = strlen (ofile_hd);
