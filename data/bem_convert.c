@@ -7,7 +7,7 @@
 #include "bem_file.h"
 
 #define USAGE_STRING \
-"Usage: %s [-o <ofile_hd>] [-tbv] <ifile>\n" \
+"Usage: %s [-o <ofile_hd>] [-tbvs] <ifile>\n" \
 "Convert the BEM input file <ifile> in the text/binary format to the binary, text, or vtk format.\n" \
 "(Note: the vtk format file can be uset do visualize the data using ParaView.)\n" \
 "The output file name is <ofile_hd>+\".bin\", <ofile_hd>+\".txt\", or <ofile_hd>+\".vtk\"\n" \
@@ -15,6 +15,7 @@
 "-t: output the text file.\n" \
 "-b: output the binary file.\n" \
 "-v: output the vtk file.\n" \
+"-s: only show of the summary of the input file.\n" \
 "If none of -tbv is specified, convert the text file to the binary file (and vice versa).\n"
 
 // Options set by command line arguments.
@@ -24,6 +25,7 @@ struct options {
   char *ofile_bin;   // output file name
   char *ofile_vtk;   // output file name
   int txt, bin, vtk; // Set to 1 if -t, -b, -v is specified
+  int show_only;     // Set to 1 if -s is specified
 };
 
 double show_elapsed_time (struct timeval *tv1, struct timeval *tv2) {
@@ -45,9 +47,10 @@ void set_options (int argc, char** argv, struct options *popt)
   // set default 
   popt->ofile_txt = popt->ofile_bin = popt->ofile_vtk = NULL;
   popt->txt = popt->bin = popt->vtk = 0;
+  popt->show_only = 0;
   // Analyze command line arguments.
   int ch;
-  while ((ch = getopt(argc, argv, "o:tbv")) != -1) {
+  while ((ch = getopt(argc, argv, "o:tbvs")) != -1) {
     switch (ch) {
     case 't':
       popt->txt = 1;
@@ -57,6 +60,9 @@ void set_options (int argc, char** argv, struct options *popt)
       break;
     case 'v':
       popt->vtk = 1;
+      break;
+    case 's':
+      popt->show_only = 1;
       break;
     case 'o':
       {
@@ -148,13 +154,13 @@ int main (int argc, char **argv)
     switch (fmt_i) {
     case BI_TEXT:
       fprintf (stderr, "Read the BEM input in the TEXT format from \"%s\".\n", opt.ifile);
-      if (! (opt.txt || opt.bin || opt.vtk)) {
+      if (!(opt.txt || opt.bin || opt.vtk) && !opt.show_only ) {
 	opt.bin = 1;
       }
       break;
     case BI_BINARY:
       fprintf (stderr, "Read the BEM input in the BINARY format from \"%s\".\n", opt.ifile);
-      if (! (opt.txt || opt.bin || opt.vtk)) {
+      if (!(opt.txt || opt.bin || opt.vtk) && !opt.show_only ) {
 	opt.txt = 1;
       }
       break;
@@ -169,6 +175,8 @@ int main (int argc, char **argv)
   open_write_show (opt.txt, &bin, BI_TEXT,   "TEXT",   opt.ofile_txt);
   open_write_show (opt.bin, &bin, BI_BINARY, "BINARY", opt.ofile_bin);
   open_write_show (opt.vtk, &bin, BI_VTK,    "VTK",    opt.ofile_vtk);
+  // Print summary of the file to STDOUT
+  print_bem_input (stdout, &bin, BI_PRETTY);
 
   return 0;
 }

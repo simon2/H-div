@@ -116,7 +116,7 @@ void print_bem_input_vtk (FILE* fp, struct bem_input* pbin)
   }
   fprintf (fp, "CELL_DATA %ld\n", pbin->nFace);
   fprintf (fp, "SCALARS solve float 1\n" "LOOKUP_TABLE default\n");
-  // 蜊倥↓0.0縺ｧOK?
+  // 単に↓0.0でOK?
   for (int i=0; i<pbin->nFace; i++){
     fprintf (fp, "%lf\n", BI_VTK_PPOHBEM_SOL);
   }
@@ -149,21 +149,25 @@ void print_bem_input (FILE* fp, struct bem_input* pbin, enum bi_format fmt)
   }
   // Print
   print_bem_input_long (fp, pbin->nNode, fmt, "Number of nodes:");
-  print_bem_input_doubles (fp, (double*)pbin->coordOfNode, 3*pbin->nNode, 3,
-			   fmt, "Coordinates of the nodes:");
+  if ( fmt != BI_PRETTY ) {
+    print_bem_input_doubles (fp, (double*)pbin->coordOfNode, 3*pbin->nNode, 3,
+			     fmt, "Coordinates of the nodes:");
+  }
   print_bem_input_long (fp, pbin->nFace, fmt, "Number of faces:");
   print_bem_input_long (fp, pbin->nNodePerFace, fmt, "Number of nodes for each face:");
   print_bem_input_long (fp, pbin->nIFValue, fmt,
 			"Number of long values for each face:");
   print_bem_input_long (fp, pbin->nDFValue, fmt,
 			"Number of double values for each face:");
-  print_bem_input_longs (fp, pbin->idOfFace,
-			 pbin->nNodePerFace*pbin->nFace,
-			 pbin->nNodePerFace, fmt, "Node IDs forming faces:");
-  print_bem_input_longs (fp, pbin->IFValue, pbin->nFace*pbin->nIFValue, 1,
-			 fmt, "Long parameter values of faces:");
-  print_bem_input_doubles (fp, pbin->DFValue, pbin->nFace*pbin->nDFValue, 1,
-			   fmt, "Double parameter values of faces:");
+  if ( fmt != BI_PRETTY ) {
+    print_bem_input_longs (fp, pbin->idOfFace,
+			   pbin->nNodePerFace*pbin->nFace,
+			   pbin->nNodePerFace, fmt, "Node IDs forming faces:");
+    print_bem_input_longs (fp, pbin->IFValue, pbin->nFace*pbin->nIFValue, 1,
+			   fmt, "Long parameter values of faces:");
+    print_bem_input_doubles (fp, pbin->DFValue, pbin->nFace*pbin->nDFValue, 1,
+			     fmt, "Double parameter values of faces:");
+  }
 }
 
  
