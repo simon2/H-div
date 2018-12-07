@@ -9,6 +9,8 @@
 #include <cilk/reducer_opadd.h>
 #include <cilk/reducer_min_max.h>
 
+#include "data/bem_file.h"
+
 #define INPUT_DEFAULT "bem_data/input_50ms.txt"
 #define PN 10000
 #define SL 11
@@ -79,44 +81,25 @@ int main(int argc, char **argv){
   int i;
   double (*coordOfNode)[3];
   double (*coordOfFace)[3];
+  struct bem_input bi;
   fname = (argc >= 3)?argv[2]:INPUT_DEFAULT;
   file = fopen(fname,"r");
   if(file == NULL){
     printf("Error: Unable to input file '%s'!\n", fname);
     exit (99);
   }else{
-    char line[100];
-    fgets(line,sizeof(line),file);
-    sscanf(line, "%d", &countOfNode);
-    coordOfNode = (double(*)[3])malloc(countOfNode*3*sizeof(double));
-    for(i=0;i<countOfNode;i++){
-      fgets(line,sizeof(line),file);
-      double x,y,z;
-      sscanf(line,"%lf %lf %lf",&x,&y,&z);
-      coordOfNode[i][0] = x;
-      coordOfNode[i][1] = y;
-      coordOfNode[i][2] = z;
+    if (read_bem_input (file, &bi, BI_AUTO) == -1) {
+      fprintf (stderr, "Bem input file read error!\n");
+      exit (99);
     }
-    fgets(line,sizeof(line),file);
-    sscanf(line,"%d",&count);
-    coordOfFace = (double(*)[3])malloc(count*3*sizeof(double));
-
-    fgets(line,sizeof(line),file);
-    fgets(line,sizeof(line),file);
-    fgets(line,sizeof(line),file);
-    
-    printf("count:%d\n",count);
-    for(i=0;i<count;i++){
-      fgets(line,sizeof(line),file);
-      int X,Y,Z;
-      sscanf(line,"%d %d %d",&X,&Y,&Z);
-      coordOfFace[i][0] = (coordOfNode[X][0] + coordOfNode[Y][0] + coordOfNode[Z][0])/3;
-      coordOfFace[i][1] = (coordOfNode[X][1] + coordOfNode[Y][1] + coordOfNode[Z][1])/3;
-      coordOfFace[i][2] = (coordOfNode[X][2] + coordOfNode[Y][2] + coordOfNode[Z][2])/3;
-    }
+    countOfNode = bi.nNode;
+    coordOfNode = bi.coordOfNode;
+    count = bi.nFace;
+    coordOfFace = bi.coordOfFace;
   }
   fclose(file);
   free(coordOfNode);
+  fprintf (stderr, "READ\n");
   double param[100];
   for(i=0;i<100;i++){
     param[i] = 0;
