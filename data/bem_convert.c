@@ -1,3 +1,4 @@
+// bem_convert:
 // Convert a PPOpen BEM input file (.bin) to the text format
 #include <stdio.h>
 #include <string.h>
@@ -27,14 +28,6 @@ struct options {
   int txt, bin, vtk; // Set to 1 if -t, -b, -v is specified
   int show_only;     // Set to 1 if -s is specified
 };
-
-double show_elapsed_time (struct timeval *tv1, struct timeval *tv2) {
-  double tm;
-  tm =  (tv2->tv_usec - tv1->tv_usec) / 1000000.0;   // [us]
-  tm += (tv2->tv_sec - tv1->tv_sec);                 // [s]
-  fprintf (stderr, "Time: %lf sec.\n", tm);
-  return tm;
-}
 
 void usage (int argc, char** argv) {
   fprintf (stderr, USAGE_STRING, argv[0]);
@@ -105,31 +98,6 @@ void set_options (int argc, char** argv, struct options *popt)
   return;
 }
 
-// If flag is non-zero, execute the sequence of:
-// * fopen output file
-// * write to the output file in the specified format (fmt)
-// * Show the elapsed time and the result text 
-void open_write_show (const int flag, struct bem_input *pbin,
-		      const enum bi_format fmt, const char *fmt_str,
-		      const char* ofile)
-{
-  if (flag) {
-    FILE *fpout;
-    struct timeval tv1, tv2;
-    if ( !(fpout = fopen (ofile, "w")) ) {
-      fprintf (stderr, "Output file %s open error!\n", ofile);
-      exit (99);
-    }
-    gettimeofday (&tv1, NULL);
-    print_bem_input (fpout, pbin, fmt);
-    gettimeofday (&tv2, NULL);
-    fprintf (stderr, "Wrote the BEM input in the %s format to \"%s\".\n",
-	     fmt_str, ofile);
-    show_elapsed_time (&tv1, &tv2);
-    fclose (fpout);
-  }
-}
-
 int main (int argc, char **argv)
 {
   struct options opt;
@@ -142,12 +110,8 @@ int main (int argc, char **argv)
   {
     FILE *fpin;
     struct timeval tv1, tv2;
-    if ( !(fpin = fopen (opt.ifile, "r")) ) {
-      fprintf (stderr, "Input file %s open error!\n", opt.ifile);
-      exit (99);
-    } 
     gettimeofday (&tv1, NULL);
-    fmt_i = read_bem_input (fpin, &bin, BI_AUTO);
+    fmt_i = open_and_read_bem_input (opt.ifile, &bin, BI_AUTO);
     gettimeofday (&tv2, NULL);
     fclose (fpin);  
     // Check the format of the input file and set the format of the output file.
@@ -172,9 +136,9 @@ int main (int argc, char **argv)
   }
   
   // Write output files if needed.
-  open_write_show (opt.txt, &bin, BI_TEXT,   "TEXT",   opt.ofile_txt);
-  open_write_show (opt.bin, &bin, BI_BINARY, "BINARY", opt.ofile_bin);
-  open_write_show (opt.vtk, &bin, BI_VTK,    "VTK",    opt.ofile_vtk);
+  open_write_show (opt.txt, &bin, BI_TEXT,   opt.ofile_txt);
+  open_write_show (opt.bin, &bin, BI_BINARY, opt.ofile_bin);
+  open_write_show (opt.vtk, &bin, BI_VTK,    opt.ofile_vtk);
   // Print summary of the file to STDOUT
   print_bem_input (stdout, &bin, BI_PRETTY);
 
