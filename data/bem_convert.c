@@ -108,12 +108,10 @@ int main (int argc, char **argv)
 
   // Read
   {
-    FILE *fpin;
     struct timeval tv1, tv2;
     gettimeofday (&tv1, NULL);
     fmt_i = open_and_read_bem_input (opt.ifile, &bin, BI_AUTO);
     gettimeofday (&tv2, NULL);
-    fclose (fpin);  
     // Check the format of the input file and set the format of the output file.
     switch (fmt_i) {
     case BI_TEXT:
