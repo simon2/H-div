@@ -735,9 +735,11 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
 	nl += lessNum[id];
       }
 
+      lessStart[0] = 0;
+      moreStart[0] = nl;
       if(nl != 0 && nl != nd){
 	int tl = 0, tm = nl;
-	for(id=0;id<gn;id++){
+	for(id=0;id<gn-1;id++){
 	  tl = tl + lessNum[id];
 	  tm = tm + moreNum[id];
 	  lessStart[id+1] = tl;
@@ -784,6 +786,7 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
 	}
       }
     }
+
     if(nl == nd || nl == 0){
       nson = 1;
       st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
