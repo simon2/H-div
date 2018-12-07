@@ -17,7 +17,7 @@
 "-b: output the binary file.\n" \
 "-v: output the vtk file.\n" \
 "-s: only show of the summary of the input file.\n" \
-"If none of -tbv is specified, convert the text file to the binary file (and vice versa).\n"
+"If none of -tbvs is specified, convert the text file to the binary file (and vice versa).\n"
 
 // Options set by command line arguments.
 struct options {
