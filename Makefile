@@ -4,6 +4,7 @@ COPT_OMP=-qopenmp
 
 TARGETS = \
 hmat_div \
+hmat_div_cilk \
 hacapk_division \
 hacapk_division_cilk \
 hacapk_division_cilk_lock \
@@ -18,6 +19,10 @@ all: $(TARGETS)
 
 # Serial version
 hmat_div: hmat_div.c data/bem_file.c
+	$(CC) $(COPT) -o $@ $^
+
+# Cilk Plus version
+hmat_div_cilk: hmat_div_cilk.c data/bem_file.c
 	$(CC) $(COPT) -o $@ $^
 
 # Changed the nesting order of the parallel loops for finding min/max.
