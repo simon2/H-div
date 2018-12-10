@@ -5,6 +5,10 @@
 #include <sys/time.h>
 #include "data/bem_file.h"
 
+#ifdef DEBUG
+#include <assert.h>
+#endif
+
 #define INPUT_DEFAULT "bem_data/input_10ts.txt"
 
 /*********define cluster************/
@@ -120,6 +124,10 @@ int main(int argc, char **argv){
   return 0;
 }
 
+#ifdef DEBUG
+int *lod0;
+#endif
+
 void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-matrix
 					   double (*gmid)[3],            //coordination of objects
 					   double param[],int *lod,
@@ -146,6 +154,9 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
 
   double start,end,spent;
   start = get_wall_time();
+#ifdef DEBUG
+  lod0 = lodfc;
+#endif
   st_clt = create_ctree_ssgeom(st_clt,gmid,param,lodfc,ndpth,ndscd,nsrt,ndf,nofc,ndim,nclst);
   end = get_wall_time();
   spent = end - start;
@@ -494,7 +505,14 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
   double zcoef = param[31];
   double zlmin[ndim],zlmax[ndim];
   ndpth = ndpth + 1;
+#ifdef DEBUG
+  printf ("ndepth = %ld, nd = %ld, range = %ld-%ld ", ndpth, nd, lod-lod0, lod-lod0+nd);
+#endif
+  
   if(nd <= minsz){
+#ifdef DEBUG
+    fprintf (stdout, "... leaf\n");
+#endif
     nson = 0;
     st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
     if(ndpth > depth_max){
@@ -540,15 +558,27 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
       }
     }
 
+#ifdef DEBUG
+    fprintf (stdout, "nl = %ld, nr = %ld\n", nl, nr);
+    assert ( nl-nr == 1 );
+    // assert ( nl < nd );
+#endif
+    
     if(nl == nd || nl == 0){
-      nson = 1;
+      nson = 0;
       st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
       if(ndpth > depth_max){
-	depth_max = ndpth;
+        depth_max = ndpth;
       }
       count_node++;
-      st_clt->pc_sons[0] = create_ctree_ssgeom(st_clt->pc_sons[0],zgmid,param,lod,
-					       ndpth,ndscd,nsrt,nd,md,ndim,nclst);
+      /* nson = 1; */
+      /* st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson); */
+      /* if(ndpth > depth_max){ */
+      /*   depth_max = ndpth; */
+      /* } */
+      /* count_node++; */
+      /* st_clt->pc_sons[0] = create_ctree_ssgeom(st_clt->pc_sons[0],zgmid,param,lod, */
+      /*   				       ndpth,ndscd,nsrt,nd,md,ndim,nclst); */
     }else{
       nson = 2;
       st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
