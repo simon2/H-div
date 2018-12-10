@@ -4,6 +4,8 @@
 #include <float.h>
 #include <time.h>
 #include <sys/time.h>
+#include <assert.h>
+
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
 #include <cilk/reducer.h>
@@ -187,13 +189,24 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   nlf = lnmtx[0] + lnmtx[1];
   st_leafmtx = (leafmtx **)malloc(nlf*sizeof(leafmtx*));
   st_leafmtxp->nlf = nlf;
-  printf("nlf:%d\n",nlf);
+  printf("nlf: %d\n",nlf);
   
   //int *countlist;
   countlist = (int **)malloc(nworkers*sizeof(int*));
 
   //lel = nlf/nworkers*3;
-  leafmtx *restrict temp_leafmtx = (leafmtx *)malloc(nworkers * nlf * sizeof(leafmtx));
+  int nlf_max_for_each_worker = (long)nlf * 4 / nworkers;
+  printf("nlf_max_for_each_worker: %d\n",nlf_max_for_each_worker);
+  leafmtx *restrict temp_leafmtx;
+  {
+    size_t sz = (size_t)nworkers * (size_t)(nlf_max_for_each_worker) * sizeof(leafmtx);
+    temp_leafmtx = (leafmtx *)malloc(sz);
+    printf ("malloc size for temp-leafmtx: %ld\n", sz);
+    if (!temp_leafmtx) {
+      printf ("malloc temp_leafmtx error!\n");
+      exit(99);
+    }
+  }
   for(i=0;i<nworkers;i++){
     countlist[i] = (int *)malloc(sizeof(int));
     countlist[i][0] = 0;
@@ -201,7 +214,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
 
   int sum = 0;
   start2 = get_wall_time();
-  create_leafmtx(temp_leafmtx,st_clt,st_clt,param,lnmtx,nffc,nlf);
+  create_leafmtx(temp_leafmtx,st_clt,st_clt,param,lnmtx,nffc,nlf_max_for_each_worker);
   end2 = get_wall_time();
   spent2 = end2 - start2;
   printf("block cluster tree time spent:%.10f\n",spent2);  
@@ -215,6 +228,9 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
     }
     sum += countlist[i];
     }*/
+  for(i=0;i<nworkers;i++){
+    assert (countlist[i][0] < nlf_max_for_each_worker);
+  }
   for(i=0;i<nworkers;i++){
     int st = i * nlf;
     for(j=0;j<countlist[i][0];j++){
