@@ -1,5 +1,5 @@
 CC=icc
-COPT=-std=c99 -O3 -xavx2
+COPT=-std=c99 -O3 -xavx2 -g
 COPT_OMP=-qopenmp
 
 TARGETS = \

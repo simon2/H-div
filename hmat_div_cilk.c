@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <float.h>
 #include <time.h>
 #include <sys/time.h>
 #include <cilk/cilk.h>
@@ -627,17 +628,18 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
   double zlmin[ndim],zlmax[ndim];
   
   ndpth = ndpth + 1;
+
   if(nd <= minsz){
     nson = 0;
     st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
   }else{
     if(nd > PN){
-      CILK_C_REDUCER_MAX(max_x,double,-10.1);
-      CILK_C_REDUCER_MIN(min_x,double,10.1);
-      CILK_C_REDUCER_MAX(max_y,double,-10.1);
-      CILK_C_REDUCER_MIN(min_y,double,10.1);
-      CILK_C_REDUCER_MAX(max_z,double,-10.1);
-      CILK_C_REDUCER_MIN(min_z,double,10.1);
+      CILK_C_REDUCER_MAX(max_x,double,-DBL_MAX);
+      CILK_C_REDUCER_MIN(min_x,double,DBL_MAX);
+      CILK_C_REDUCER_MAX(max_y,double,-DBL_MAX);
+      CILK_C_REDUCER_MIN(min_y,double,DBL_MAX);
+      CILK_C_REDUCER_MAX(max_z,double,-DBL_MAX);
+      CILK_C_REDUCER_MIN(min_z,double,DBL_MAX);
       CILK_C_REGISTER_REDUCER(max_x);
       CILK_C_REGISTER_REDUCER(min_x);
       CILK_C_REGISTER_REDUCER(max_y);
@@ -770,11 +772,13 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
       }
     }
 
-    if(nl == nd || nl == 0){
-      nson = 1;
+    if(nl == 0 || nl == nd){
+      /* nson = 1; */
+      /* st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson); */
+      /* st_clt->pc_sons[0] = create_ctree_ssgeom(st_clt->pc_sons[0],zgmid,tempzgmid,param, */
+      /*   				       ndpth,ndscd,nsrt,nd,md,ndim,nclst); */
+      nson = 0;
       st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
-      st_clt->pc_sons[0] = create_ctree_ssgeom(st_clt->pc_sons[0],zgmid,tempzgmid,param,
-					       ndpth,ndscd,nsrt,nd,md,ndim,nclst);
     }else{
       if(ndpth < SL){
 	if(nd > PN){
