@@ -189,7 +189,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
   printf("nlf:%d\n",nlf);
   printf("block cluster tree time spent:%.10f\n",spent);
   printf("depth_max:%d  count_node:%d\n",depth_max,count_node);
-  /*qsort_row_leafmtx(st_leafmtx,0,nlf-1);
+  qsort_row_leafmtx(st_leafmtx,0,nlf-1);
   int ilp = 0;
   int ips = 0;
   for(ip=0;ip<nlf;ip++){
@@ -205,10 +205,14 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
       qsort_col_leafmtx(st_leafmtx,ips,nlf-1);
     }
   }
-  
-  //for(i=0;i<st_leafmtxp->nlf;i++){
-  //  printf("nstrtl:%d ndl:%d nstrtt:%d ndt:%d\n",st_leafmtx[i].nstrtl,st_leafmtx[i].ndl,st_leafmtx[i].nstrtt,st_leafmtx[i].ndt);
-  //}
+
+  FILE * fp;
+  fp = fopen ("result_plot.txt","w");  
+  for(i=0;i<st_leafmtxp->nlf;i++){
+    fprintf(fp,"%ld, %ld, %ld, %ld, %ld, %ld\n",0,st_leafmtx[i].nstrtl,st_leafmtx[i].nstrtt,
+	    st_leafmtx[i].nstrtl+st_leafmtx[i].ndl-1,st_leafmtx[i].nstrtt+st_leafmtx[i].ndt-1,st_leafmtx[i].ltmtx);
+  }
+  fclose (fp);
   free_st_clt(st_clt);
 
   for(il=0;il<nofc;il++){
@@ -216,7 +220,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
       int is = ig + il * nffc;
       lod[is] = lodfc[il];
     }
-    }*/
+  }
 }
 
 void qsort_row_leafmtx(leafmtx *st_leafmtx,int first,int last){
