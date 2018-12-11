@@ -9,7 +9,7 @@
 #include <assert.h>
 #endif
 
-#define INPUT_DEFAULT "bem_data/input_10ts.txt"
+#define INPUT_DEFAULT "bem_data/input_50ms.txt"
 
 /*********define cluster************/
 typedef struct cluster cluster;

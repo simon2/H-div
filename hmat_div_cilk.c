@@ -17,7 +17,7 @@
 #define INPUT_DEFAULT "bem_data/input_50ms.txt"
 #define PN 10000
 #define SL 20
-#define CHUNK_SIZE 1
+#define CHUNK_SIZE 10000000
 
 /*********define cluster************/
 typedef struct cluster cluster;
@@ -710,7 +710,7 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
     int nl = 0;
     int nr = nd-1;
     if(nd > PN){
-      int gn = nd/CHUNK_SIZE;
+      int gn = nd/CHUNK_SIZE+1;
       int *lessNum = (int *)malloc(gn*sizeof(int));
       int *moreNum = (int *)malloc(gn*sizeof(int));
       int *lessStart = (int *)malloc(gn*sizeof(int));
