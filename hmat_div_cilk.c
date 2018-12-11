@@ -15,9 +15,9 @@
 #include "data/bem_file.h"
 
 #define INPUT_DEFAULT "bem_data/input_50ms.txt"
-#define PN 100000
+#define PN 10000
 #define SL 20
-#define CHUNK_SIZE 2
+#define CHUNK_SIZE 1
 
 /*********define cluster************/
 typedef struct cluster cluster;
