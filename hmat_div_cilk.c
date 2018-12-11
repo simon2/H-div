@@ -15,8 +15,8 @@
 #include "data/bem_file.h"
 
 #define INPUT_DEFAULT "bem_data/input_50ms.txt"
-#define PN 10000
-#define SL 11
+#define PN 100000
+#define SL 20
 #define CHUNK_SIZE 2
 
 /*********define cluster************/
@@ -732,9 +732,14 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
 	moreNum[id] = mn;
       }
 
-      for(id=0;id<gn;id++){
-	nl += lessNum[id];
+      CILK_C_REDUCER_OPADD(ssum, int, 0);
+      CILK_C_REGISTER_REDUCER(ssum);
+      _Cilk_for(id=0;id<gn;id++){
+	//nl += lessNum[id];
+	REDUCER_VIEW(ssum) += lessNum[id];
       }
+      nl = REDUCER_VIEW(ssum);
+      CILK_C_UNREGISTER_REDUCER(ssum);
 
       lessStart[0] = 0;
       moreStart[0] = nl;
