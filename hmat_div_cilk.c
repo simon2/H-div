@@ -17,7 +17,7 @@
 #define INPUT_DEFAULT "bem_data/input_50ms.txt"
 #define PN 10000
 #define SL 20
-#define CHUNK_SIZE 10000000
+#define CHUNK_SIZE 2
 
 /*********define cluster************/
 typedef struct cluster cluster;
@@ -195,7 +195,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   countlist = (int **)malloc(nworkers*sizeof(int*));
 
   //lel = nlf/nworkers*3;
-  int nlf_max_for_each_worker = (long)nlf * 4 / nworkers;
+  int nlf_max_for_each_worker = (long)nlf * 10 / nworkers;
   printf("nlf_max_for_each_worker: %d\n",nlf_max_for_each_worker);
   leafmtx *restrict temp_leafmtx;
   {
@@ -404,7 +404,7 @@ void create_leafmtx(leafmtx *restrict temp_leafmtx,cluster *st_cltl,cluster *st_
     countlist[my_num][0]++;
 
   }else{
-    if(st_cltl->ndpth < 12 && st_cltt->ndpth < 12){
+    if(st_cltl->ndpth < SL && st_cltt->ndpth < SL){
       int il;
       cilk_for(il=0;il<st_cltl->nnson;il++){
 	int it;
