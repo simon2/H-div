@@ -16,6 +16,7 @@
 
 #define INPUT_DEFAULT "bem_data/input_50ms.txt"
 #define PN 10000
+#define PL 10000
 #define SL 20
 #define CHUNK_SIZE 2
 
@@ -743,6 +744,10 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
 
       lessStart[0] = 0;
       moreStart[0] = nl;
+      FILE *pfile;
+      pfile = fopen ("nl.txt", "a");
+      fprintf(pfile,"%ld\n",nl);
+      fclose(pfile);
       if(nl != 0 && nl != nd){
 	int tl = 0, tm = nl;
 	for(id=0;id<gn-1;id++){
@@ -801,7 +806,7 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
       nson = 0;
       st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
     }else{
-      if(ndpth < SL){
+      if(nd > PL){
 	if(nd > PN){
 	  nson = 2;
 	  st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);

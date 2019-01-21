@@ -444,6 +444,7 @@ void set_bndbox_cog(cluster *st_clt, double (*zgmid)[3], int *lod, int nofc){
     }else{
       l = l + st_clt->pc_sons[ic-1]->nsize;
     }
+    printf("%ld\n",l);
     set_bndbox_cog(st_clt->pc_sons[ic],zgmid,&lod[l],nofc);
   }
   cal_bndbox_cog(st_clt,zgmid,lod,nofc);

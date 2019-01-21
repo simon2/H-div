@@ -9,19 +9,20 @@
 (c-exp "#include <sys/time.h>")
 (c-exp "#include \"../data/bem_file.h\"")
 (%defconstant PN 10000)
-(%defconstant PARA_LEVEL 40)
+(%defconstant PL 10000)
+(%defconstant PARA_LEVEL 20)
 (%defconstant CHUNK_SIZE 2)
 
 ;; ; Spherecube
-(%defconstant INPUT_DEFAULT "../data_pro1804/input_100ts.txt_cb_1.5_10_10_10.bin")
+;(%defconstant INPUT_DEFAULT "../data_pro1804/input_100ts.txt_cb_1.5_10_10_10.bin")
 ;; ; Spherepyramid
-;; (%defconstant INPUT_DEFAULT "../data_pro1804/input_100ts.txt_pb_1.5_14.bin")
+; (%defconstant INPUT_DEFAULT "../data_pro1804/input_100ts.txt_pb_1.5_14.bin")
 ;; ; Sphere
-;; (%defconstant INPUT_DEFAULT "../data_pro1804/input_50ms.bin")
+(%defconstant INPUT_DEFAULT "../data_pro1804/input_50ms.bin")
 ;; ; humanoids
-;; (%defconstant INPUT_DEFAULT "../data_pro1804/input_human_1x1.txt_cb_0.3_50_100_1.bin")
+; (%defconstant INPUT_DEFAULT "../data_pro1804/input_human_1x1.txt_cb_0.3_50_100_1.bin")
 
-(%defconstant NWORKER-MAX 300)
+(%defconstant NWORKER-MAX 540)
 (extern-decl num-thrs unsigned-int)
 
 ;; *********define cluster************
@@ -81,7 +82,7 @@
   (def i2 int :in))
 
 (def (task start-up)
-  (def r int :out))
+  (def r int))
 
 (def (task build-cluster)
   (def st-clt (ptr cluster) :in)
@@ -156,10 +157,10 @@
     (fn double (ptr cluster) (ptr cluster)))
 (decl (csym::count-lntmx st-cltl st-cltt param lnmtx nffc)
     (fn void (ptr cluster) (ptr cluster) (array double) (ptr int) int))
-(decl (csym::cal-bndbox-cog st-clt zgmid lod nofc)
-    (fn void (ptr cluster) (ptr (array double 3)) (ptr int) int))
-(decl (csym::set-bndbox-cog st-clt zgmid lod nofc)
-    (fn void (ptr cluster) (ptr (array double 3)) (ptr int) int))
+(decl (csym::cal-bndbox-cog st-clt zgmid nofc)
+    (fn void (ptr cluster) (ptr (array double 3)) int))
+(decl (csym::set-bndbox-cog st-clt zgmid nofc)
+    (fn void (ptr cluster) (ptr (array double 3)) int))
 (decl (csym::create-cluster nmbr ndpth nstrt nsize ndim nson)
     (fn (ptr cluster) int int int int int int))
 (decl (csym::free-st-clt st-clt)
@@ -301,7 +302,8 @@
   (= end (csym::get-wall-time))
   (= spent (- end start))
   (csym::fprintf stderr "cluster tree time spent:%.10lf~%" spent)
-  (csym::set-bndbox-cog st-clt gmid lodfc nofc)
+  (csym::set-bndbox-cog st-clt gmid nofc)
+  (csym::fprintf stderr "set bndbox over!")
   (= ndpth 0)
   (= start (csym::get-wall-time))
   (csym::count-lntmx st-clt st-clt param lnmtx nffc)
@@ -313,7 +315,8 @@
   (= st-leafmtx (cast (ptr leafmtx) (csym::malloc (* nlf (sizeof leafmtx)))))
   (= (fref (mref st-leafmtxp) nlf) nlf)
   (csym::fprintf stderr "nlf: %ld~%" nlf)
-  (def nlf-for-each-worker int (/ (* (cast long nlf) 4) num-thrs))
+  
+  (def nlf-for-each-worker int (/ (* (cast long nlf) 20) num-thrs))
   (csym::fprintf stderr "nlf-for-each-worker: %ld~%" nlf-for-each-worker)
   (begin
     (def sz size-t (* nlf-for-each-worker (cast long num-thrs)))
@@ -436,6 +439,7 @@
   (def nstrtt int (fref (mref st-cltt) nstrt))
   (def nnsonl int (fref (mref st-cltl) nnson))
   (def nnsont int (fref (mref st-cltt) nnson))
+  (def ndpth int (fref (mref st-cltt) ndpth))
   (decl ia int)
   (def nleaf double (aref param 41))
   (def zeta double (aref param 51))
@@ -467,21 +471,35 @@
 	      ;;(= (aref nff WORKER-ID) (+ (aref nff WORKER-ID) 1))
 	      #|(csym::fprintf stderr "type2 end~%")|#)
             (begin
-              (do-many for ia from i1 to i2
-		(decl il int) (decl it int)
-		(= il (/ ia nnsont))
-		(= it (% ia nnsont))
-		(decl al int)
-		(= al (* (fref (aref (fref st-cltl -> pc-sons) il) -> nnson) (fref (aref (fref st-cltt -> pc-sons) it) -> nnson)))
-;;		(csym::fprintf stderr "al:%ld~%" al)
-		(create-leafmtx (aref (fref (mref st-cltl) pc-sons) il) (aref (fref (mref st-cltt) pc-sons) it) 0 al)
-		(handles create-leafmtx
-		  (:put from j1 to j2
-			(= this.st-cltl st-cltl)
-			(= this.st-cltt st-cltt)
-			(= this.i1 j1)
-			(= this.i2 j2))
-		  (:get))))))))
+	      (if (< ndpth PARA_LEVEL)
+		  (begin
+		    (do-many for ia from i1 to i2
+		      (decl il int) (decl it int)
+		      (= il (/ ia nnsont))
+		      (= it (% ia nnsont))
+		      (decl al int)
+		      (= al (* (fref (aref (fref st-cltl -> pc-sons) il) -> nnson) (fref (aref (fref st-cltt -> pc-sons) it) -> nnson)))
+		      (create-leafmtx (aref (fref (mref st-cltl) pc-sons) il) (aref (fref (mref st-cltt) pc-sons) it) 0 al)
+		      (handles create-leafmtx
+			(:put from j1 to j2
+			      (= this.st-cltl st-cltl)
+			      (= this.st-cltt st-cltt)
+			      (= this.i1 j1)
+			      (= this.i2 j2))
+			(:get)))
+		    )
+		(begin
+		  (for ((= ia i1) (< ia i2) (inc ia))
+		    (decl il int) (decl it int)
+		    (= il (/ ia nnsont))
+		    (= it (% ia nnsont))
+		    (decl al int)
+		    (= al (* (fref (aref (fref st-cltl -> pc-sons) il) -> nnson) (fref (aref (fref st-cltt -> pc-sons) it) -> nnson)))
+		    (create-leafmtx (aref (fref (mref st-cltl) pc-sons) il) (aref (fref (mref st-cltt) pc-sons) it) 0 al)
+		    )
+		  )
+		)
+	      )))))
 
 (def (csym::dist-2cluster st-cltl st-cltt) (fn double (ptr cluster) (ptr cluster))
  (def zs double 0.0) (decl id int)
@@ -534,8 +552,8 @@
                   (csym::count-lntmx (aref (fref (mref st-cltl) pc-sons) il)
                                (aref (fref (mref st-cltt) pc-sons) it) param lnmtx nffc))))))))
 
-(def (csym::cal-bndbox-cog st-clt zgmid lod nofc)
-    (fn void (ptr cluster) (ptr (array double 3)) (ptr int) int)
+(def (csym::cal-bndbox-cog st-clt zgmid nofc)
+    (fn void (ptr cluster) (ptr (array double 3)) int)
   (def ndim int (fref (mref st-clt) ndim))
   (decl id int)
   (decl il int)
@@ -563,20 +581,20 @@
                      (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmax) id)))))))
       (begin
         (for ((= id 0) (< id ndim) (inc id))
-          (= (aref (fref (mref st-clt) bmin) id) (aref (aref zgmid (aref lod 0)) id))
-          (= (aref (fref (mref st-clt) bmax) id) (aref (aref zgmid (aref lod 0)) id)))
+          (= (aref (fref (mref st-clt) bmin) id) (aref (aref zgmid 0) id))
+          (= (aref (fref (mref st-clt) bmax) id) (aref (aref zgmid 0) id)))
         (for ((= id 0) (< id ndim) (inc id))
           (for ((= il 1) (< il (fref (mref st-clt) nsize)) (inc il))
-            (if (< (aref (aref zgmid (aref lod il)) id)
+            (if (< (aref (aref zgmid il) id)
                    (aref (fref (mref st-clt) bmin) id))
                 (begin
                   (= (aref (fref (mref st-clt) bmin) id)
-                     (aref (aref zgmid (aref lod il)) id))))
+                     (aref (aref zgmid il) id))))
             (if (< (aref (fref (mref st-clt) bmax) id)
-                   (aref (aref zgmid (aref lod il)) id))
+                   (aref (aref zgmid il) id))
                 (begin
                   (= (aref (fref (mref st-clt) bmax) id)
-                     (aref (aref zgmid (aref lod il)) id))))))))
+                     (aref (aref zgmid il) id))))))))
   (def zwdth double
     (* (- (aref (fref (mref st-clt) bmax) 0) (aref (fref (mref st-clt) bmin) 0))
        (- (aref (fref (mref st-clt) bmax) 0) (aref (fref (mref st-clt) bmin) 0))))
@@ -609,16 +627,15 @@
              (aref (fref (mref st-clt) bmin) id)))))
   (= (fref (mref st-clt) zwdth) (csym::sqrt zwdth)))
 
-(def (csym::set-bndbox-cog st-clt zgmid lod nofc)
-    (fn void (ptr cluster) (ptr (array double 3)) (ptr int) int) (decl ic int) (decl l int)
+(def (csym::set-bndbox-cog st-clt zgmid nofc)
+    (fn void (ptr cluster) (ptr (array double 3)) int) (decl ic int) (decl l int)
     (for ((= ic 0) (< ic (fref (mref st-clt) nnson)) (inc ic))
       (if (== ic 0) (begin (= l 0))
           (begin
             (= l
                (+ l (fref (mref (aref (fref (mref st-clt) pc-sons) (- ic 1))) nsize)))))
-      (csym::set-bndbox-cog (aref (fref (mref st-clt) pc-sons) ic) zgmid
-                      (ptr (aref lod l)) nofc))
-    (csym::cal-bndbox-cog st-clt zgmid lod nofc))
+      (csym::set-bndbox-cog (aref (fref (mref st-clt) pc-sons) ic) (ptr (aref zgmid l)) nofc))
+    (csym::cal-bndbox-cog st-clt zgmid nofc))
 
 (def (csym::create-cluster nmbr ndpth nstrt nsize ndim nson)
     (fn (ptr cluster) int int int int int int)
@@ -705,7 +722,7 @@
       (def nl int 0) (def nr int (- nd 1))
       (if (> nd PN)
 	  (begin
-	    (def gn int (/ nd CHUNK_SIZE))
+	    (def gn int (+ (/ nd CHUNK_SIZE) 1))
 	    (def lessNum (ptr int))
 	    (def moreNum (ptr int))
 	    (def lessStart (ptr int))
@@ -716,10 +733,14 @@
 	    (= moreStart (cast (ptr int) (csym::malloc (* gn (sizeof int)))))
 	    (countNum 0 gn lessNum moreNum zgmid nd ncut zlmid gn)
 	    (= nl (ssum 0 gn lessNum))
+	    (= (aref lessStart 0) 0)
+	    (= (aref moreStart 0) nl)
+	    (decl pfile (ptr FILE))
+	    (= pfile (fopen "nl2.txt" "a"))
+	    (csym::fprintf pfile "%ld~%" nl)
+	    (csym::fclose pfile)
 	    (if (and (!= nl 0) (!= nl nd))
 		(begin 
-		  (= (aref lessStart 0) 0)
-		  (= (aref moreStart 0) nl)
 		  (def tl int 0)
 		  (def tm int nl)
 		  (for ((= id 0) (< id (- gn 1)) (inc id))
@@ -769,9 +790,9 @@
 	  (def nd1 int nl)
 	  (def nsrt2 int (+ nsrt nl))
 	  (def nd2 int (- nd nl))
-	  (if (< ndpth PARA_LEVEL)
+	  (if (> nd PL)
 	      (begin ;parallel here
-		(if (< nd PN)
+		(if (<= nd PN)
 		    (begin
 		      (do-two
 			  (= (aref (fref (mref st-clt) pc-sons) 0)
@@ -822,7 +843,7 @@
 				      (= (aref (fref (mref st-clt) pc-sons) 1) this.r))))
 				)
 			    (begin
-			      (if (and (< nd1 PN) (< nd2 PN))
+			      (if (and (<= nd1 PN) (<= nd2 PN))
 				  (begin
 				    (for ((= i 0) (< i nd) (inc i))
 				      (= (aref (aref zgmid i) 0) (aref (aref tempzgmid i) 0))
@@ -851,7 +872,7 @@
 					  (= (aref (fref (mref st-clt) pc-sons) 1) this.r))))
 				    )
 				(begin
-				  (if (and (< nd1 PN) (> nd2 PN))
+				  (if (and (<= nd1 PN) (> nd2 PN))
 				      (begin
 					(for ((= i 0) (< i nl) (inc i))
 					  (= (aref (aref zgmid i) 0) (aref (aref tempzgmid i) 0))
@@ -881,7 +902,7 @@
 					)
 
 				    (begin
-				      (if (and (> nd1 PN) (< nd2 PN))
+				      (if (and (> nd1 PN) (<= nd2 PN))
 					  (begin
 					    (for ((= i nl) (< i nd) (inc i))
 					      (= (aref (aref zgmid i) 0) (aref (aref tempzgmid i) 0))
@@ -945,7 +966,7 @@
 		  )
 		)
 	    (begin ;no parallel here
-	      (if (< nd PN)
+	      (if (<= nd PN)
 		  (begin
 		    (= (aref (fref (mref st-clt) pc-sons) 0)
 		       (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 0) zgmid tempzgmid
@@ -967,7 +988,7 @@
 						      (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 			      )
 			  (begin
-			    (if (and (< nd1 PN) (< nd2 PN))
+			    (if (and (<= nd1 PN) (<= nd2 PN))
 				(begin
 				  (for ((= i 0) (< i nd) (inc i))
 				    (= (aref (aref zgmid i) 0) (aref (aref tempzgmid i) 0))
@@ -982,7 +1003,7 @@
 							  (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 				  )
 			      (begin
-				(if (and (< nd1 PN) (> nd2 PN))
+				(if (and (<= nd1 PN) (> nd2 PN))
 				    (begin
 				      (for ((= i 0) (< i nl) (inc i))
 					(= (aref (aref zgmid i) 0) (aref (aref tempzgmid i) 0))
@@ -997,7 +1018,7 @@
 							      (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 				      )
 				  (begin
-				    (if (and (> nd1 PN) (< nd2 PN))
+				    (if (and (> nd1 PN) (<= nd2 PN))
 					(begin
 					  (for ((= i nl) (< i nd) (inc i))
 					    (= (aref (aref zgmid i) 0) (aref (aref tempzgmid i) 0))
