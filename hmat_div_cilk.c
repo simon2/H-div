@@ -18,7 +18,7 @@
 #define PN 10000
 #define PL 100
 #define SL 10000
-#define CHUNK_SIZE 1
+#define CHUNK_SIZE 10000
 
 /*********define cluster************/
 typedef struct cluster cluster;
@@ -755,11 +755,12 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
     int nr = nd-1;
     if(nd > PN){
       int gn = nd/CHUNK_SIZE+1;
-      int *lessNum = (int *)malloc(gn*sizeof(int));
-      int *moreNum = (int *)malloc(gn*sizeof(int));
-      int *lessStart = (int *)malloc(gn*sizeof(int));
-      int *moreStart = (int *)malloc(gn*sizeof(int));      
-#pragma cilk grainsize = 100000
+      //int gn = nd + 1;
+      int *lessNum = (int *)malloc(nd*sizeof(int));
+      int *moreNum = (int *)malloc(nd*sizeof(int));
+      int *lessStart = (int *)malloc(nd*sizeof(int));
+      int *moreStart = (int *)malloc(nd*sizeof(int));      
+//#pragma cilk grainsize = 100000
       _Cilk_for(id=0;id<gn;id++){
 	int start = id * CHUNK_SIZE;
 	int end = id==gn-1 ? nd : start+CHUNK_SIZE;
