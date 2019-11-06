@@ -766,10 +766,10 @@ cluster * create_ctree_ssgeom(cluster *st_clt,        //the current node
         lessStart = (int *)malloc((nd+1)*sizeof(int));
         moreStart = (int *)malloc((nd+1)*sizeof(int));
       }else{
-        lessNum = (int*)a;
-        moreNum = (int*)b;
-        lessStart = (int*)c;
-        moreStart = (int*)d;
+        lessNum = (int*)alloc;
+        moreNum = (int*)alloc;
+        lessStart = (int*)alloc;
+        moreStart = (int*)alloc;
       }
       
       //#pragma cilk grainsize = 100000
