@@ -129,11 +129,11 @@ int *lod0;
 #endif
 
 void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-matrix
-					   double (*gmid)[3],            //coordination of objects
-					   double param[],int *lod,
-					   int *lnmtx,              //1:k-rank 2:dense 3:H-matrix
-					   int nofc,int nffc,       //number of elements in same coordination
-					   int ndim){
+					                                 double (*gmid)[3],        //coordination of objects
+					                                 double param[],int *lod,
+					                                 int *lnmtx,               //1:k-rank 2:dense 3:H-matrix
+					                                 int nofc,int nffc,        //number of elements in same coordination
+					                                 int ndim){
   cluster *st_clt = (cluster *)malloc(sizeof(cluster));
   int i,nfl,nflkt,ip,il,ig;
   int nd = nofc * nffc;
@@ -371,9 +371,9 @@ void count_lntmx(cluster *st_cltl,cluster *st_cltt,double param[],int *lnmtx,int
     }else{
       lnmtx[2] = lnmtx[2] + 1;
       for(il=0;il<nnsonl;il++){
-	for(it=0;it<nnsont;it++){
-	  count_lntmx(st_cltl->pc_sons[il],st_cltt->pc_sons[it],param,lnmtx,nffc);
-	}
+	      for(it=0;it<nnsont;it++){
+	        count_lntmx(st_cltl->pc_sons[il],st_cltt->pc_sons[it],param,lnmtx,nffc);
+	      }
       }
     }
   }
@@ -392,12 +392,12 @@ void cal_bndbox_cog(cluster *st_clt,double (*zgmid)[3],int *lod,int nofc){
     }
     for(il=1;il<st_clt->nnson;il++){
       for(id=0;id<ndim;id++){
-	if(st_clt->pc_sons[il]->bmin[id] < st_clt->bmin[id]){
-	  st_clt->bmin[id] = st_clt->pc_sons[il]->bmax[id];
-	}
-	if(st_clt->bmax[id] < st_clt->pc_sons[il]->bmax[id]){
-	  st_clt->bmax[id] = st_clt->pc_sons[il]->bmax[id];
-	}
+	      if(st_clt->pc_sons[il]->bmin[id] < st_clt->bmin[id]){
+	        st_clt->bmin[id] = st_clt->pc_sons[il]->bmax[id];
+	      }
+	      if(st_clt->bmax[id] < st_clt->pc_sons[il]->bmax[id]){
+	        st_clt->bmax[id] = st_clt->pc_sons[il]->bmax[id];
+	      }
       }
     }
   }else{
@@ -407,12 +407,12 @@ void cal_bndbox_cog(cluster *st_clt,double (*zgmid)[3],int *lod,int nofc){
     }
     for(id=0;id<ndim;id++){
       for(il=1;il<st_clt->nsize;il++){
-	if(zgmid[lod[il]][id] < st_clt->bmin[id]){
-	  st_clt->bmin[id] = zgmid[lod[il]][id];
-	}
-	if(st_clt->bmax[id] < zgmid[lod[il]][id]){
-	  st_clt->bmax[id] = zgmid[lod[il]][id];
-	}
+	      if(zgmid[lod[il]][id] < st_clt->bmin[id]){
+	        st_clt->bmin[id] = zgmid[lod[il]][id];
+	      }
+	      if(st_clt->bmax[id] < zgmid[lod[il]][id]){
+	        st_clt->bmax[id] = zgmid[lod[il]][id];
+	      }
       }
     }
   }
@@ -494,16 +494,16 @@ void checkClusterTree(FILE *f,cluster *st_clt){
 
 /****create cluster tree******/
 cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
-			      double (*zgmid)[3],     //coordination of objects
-			      double param[],    //param[21] is minGroup, param[31] is ? 
-			      int *lod,          //hash table of pre-index and pro-index
-			      int ndpth,         //depth of the tree
-			      int ndscd,
-			      int nsrt,          //the start index of list
-			      int nd,            //the length of list
-			      int md,            //number of data
-			      int ndim,          //number of dimension (default is 3)
-			      int nclst){        //number of cluster
+			                        double (*zgmid)[3],//coordination of objects
+			                        double param[],    //param[21] is minGroup, param[31] is ? 
+			                        int *lod,          //hash table of pre-index and pro-index
+			                        int ndpth,         //depth of the tree
+			                        int ndscd,
+			                        int nsrt,          //the start index of list
+			                        int nd,            //the length of list
+			                        int md,            //number of data
+			                        int ndim,          //number of dimension (default is 3)
+			                        int nclst){        //number of cluster
   int id,il,nson;
   double minsz = param[21];
   double zcoef = param[31];
@@ -528,12 +528,12 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
       zlmin[id] = zgmid[lod[0]][id];
       zlmax[id] = zlmin[id];
       for(il=1;il<nd;il++){
-	double zg = zgmid[lod[il]][id];
-	if(zg < zlmin[id]){
-	  zlmin[id] = zg;
-	}else if(zlmax[id] < zg){
-	  zlmax[id] = zg;
-	}
+	      double zg = zgmid[lod[il]][id];
+	      if(zg < zlmin[id]){
+	        zlmin[id] = zg;
+	      }else if(zlmax[id] < zg){
+	        zlmax[id] = zg;
+	      }
       }
     }
     double zdiff = zlmax[0] - zlmin[0];
@@ -541,8 +541,8 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
     for(id=0;id<ndim;id++){
       double zidiff = zlmax[id]-zlmin[id];
       if(zidiff > zcoef * zdiff){
-	zdiff = zidiff;
-	ncut = id;
+	      zdiff = zidiff;
+	      ncut = id;
       }
     }
     double zlmid = 0.5 * (zlmax[ncut] + zlmin[ncut]);
@@ -550,15 +550,15 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
     int nr = nd-1;
     while(nl < nr){
       while(nl < nd && zgmid[lod[nl]][ncut] <= zlmid){
-	nl = nl + 1;
+	      nl = nl + 1;
       }
       while(nr >= 0 && zgmid[lod[nr]][ncut] > zlmid){
-	nr = nr - 1;
+	      nr = nr - 1;
       }
       if(nl < nr){
-	int nh = lod[nl];
-	lod[nl] = lod[nr];
-	lod[nr] = nh;
+	      int nh = lod[nl];
+	      lod[nl] = lod[nr];
+	      lod[nr] = nh;
       }
     }
 
@@ -587,18 +587,18 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
       nson = 2;
       st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
       if(ndpth > depth_max){
-	depth_max = ndpth;
+	      depth_max = ndpth;
       }
       count_node++;
       int nsrt1 = nsrt;
       int nd1 = nl;
       st_clt->pc_sons[0] = create_ctree_ssgeom(st_clt->pc_sons[0],zgmid,param,lod,
-					       ndpth,ndscd,nsrt1,nd1,md,ndim,nclst);
+					                                     ndpth,ndscd,nsrt1,nd1,md,ndim,nclst);
 
       nsrt1 = nsrt + nl;
       nd1 = nd - nl;
       st_clt->pc_sons[1] = create_ctree_ssgeom(st_clt->pc_sons[1],zgmid,param,&lod[nl],
-					       ndpth,ndscd,nsrt1,nd1,md,ndim,nclst);
+					                                     ndpth,ndscd,nsrt1,nd1,md,ndim,nclst);
     }
   }
   st_clt->ndscd = nd;
@@ -613,7 +613,6 @@ double get_wall_time(){
   }
   return (double)time.tv_sec + (double)time.tv_usec * .000001;
 }
-
 
 double get_cpu_time(){
   return (double)clock() / CLOCKS_PER_SEC;
