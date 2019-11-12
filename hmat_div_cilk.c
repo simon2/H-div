@@ -18,8 +18,8 @@
 #define PN 10000
 #define PL 100
 #define SL 10000
-#define CHUNK_SIZE 10000000
-#define TH 63000
+#define CHUNK_SIZE 10000
+#define TH 70000
 
 /*********define cluster************/
 typedef struct cluster cluster;
@@ -756,15 +756,15 @@ cluster * create_ctree_ssgeom(cluster *st_clt,        //the current node
     int nr = nd-1;
     if(nd > PN){
       int gn = nd/CHUNK_SIZE+1;
-      size_t asize = (nd > TH) ? 1 : (nd+1);
+      size_t asize = (gn > TH) ? 1 : gn;
       int lessN[asize];
       int moreN[asize];
       int lessS[asize];
       int moreS[asize];
-      int* restrict lessNum = (nd > TH) ? (int *)malloc((nd+1)*sizeof(int)) : lessN;
-      int* restrict moreNum = (nd > TH) ? (int *)malloc((nd+1)*sizeof(int)) : moreN;
-      int* restrict lessStart = (nd > TH) ? (int *)malloc((nd+1)*sizeof(int)) : lessS;
-      int* restrict moreStart = (nd > TH) ? (int *)malloc((nd+1)*sizeof(int)) : moreS;
+      int* restrict lessNum = (gn > TH) ? (int *)malloc((nd+1)*sizeof(int)) : lessN;
+      int* restrict moreNum = (gn > TH) ? (int *)malloc((nd+1)*sizeof(int)) : moreN;
+      int* restrict lessStart = (gn > TH) ? (int *)malloc((nd+1)*sizeof(int)) : lessS;
+      int* restrict moreStart = (gn > TH) ? (int *)malloc((nd+1)*sizeof(int)) : moreS;
       
       //#pragma cilk grainsize = 100000
       _Cilk_for(id=0;id<gn;id++){
@@ -823,7 +823,7 @@ cluster * create_ctree_ssgeom(cluster *st_clt,        //the current node
 	        }
 	      }
       }
-      if(nd>TH){
+      if(gn>TH){
         free(lessNum);
         free(moreNum);
         free(lessStart);
