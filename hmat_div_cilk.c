@@ -15,11 +15,11 @@
 #include "data/bem_file.h"
 
 #define INPUT_DEFAULT "bem_data/input_50ms.txt"
-#define PN 10000
-#define PL 100
+#define PN 10000          //TS
+#define PL 100            //TN
 #define SL 10000
-#define CHUNK_SIZE 10000
-#define TH 70000
+#define CHUNK_SIZE 10000000     //C
+#define TH 1000
 
 /*********define cluster************/
 typedef struct cluster cluster;
@@ -69,6 +69,7 @@ double get_cpu_time();
 int depth_max(cluster *st_clt);
 
 void checkClusterTree(FILE *f,cluster *st_clt);
+void prefix_sum_seq1(int* input, int length, int sp);
 
 int **countlist;
 int depth_m = 0;
@@ -755,18 +756,12 @@ cluster * create_ctree_ssgeom(cluster *st_clt,        //the current node
     int nl = 0;
     int nr = nd-1;
     if(nd > PN){
-      int gn = nd/CHUNK_SIZE+1;
-      size_t asize = (gn > TH) ? 1 : gn;
-      int lessN[asize];
-      int moreN[asize];
-      int lessS[asize];
-      int moreS[asize];
-      int* restrict lessNum = (gn > TH) ? (int *)malloc((nd+1)*sizeof(int)) : lessN;
-      int* restrict moreNum = (gn > TH) ? (int *)malloc((nd+1)*sizeof(int)) : moreN;
-      int* restrict lessStart = (gn > TH) ? (int *)malloc((nd+1)*sizeof(int)) : lessS;
-      int* restrict moreStart = (gn > TH) ? (int *)malloc((nd+1)*sizeof(int)) : moreS;
-      
-      //#pragma cilk grainsize = 100000
+      size_t gn = nd/CHUNK_SIZE+1;
+      //size_t asize = (gn > TH) ? 1 : gn;
+      int* restrict lessNum = (int *)malloc((gn+500000)*sizeof(int));
+      int* restrict moreNum = (int *)malloc((gn+500000)*sizeof(int));
+      int* restrict lessStart = (int *)malloc((gn+500000)*sizeof(int));
+      int* restrict moreStart = (int *)malloc((gn+500000)*sizeof(int));
       _Cilk_for(id=0;id<gn;id++){
 	      int start = id * CHUNK_SIZE;
 	      int end = id==gn-1 ? nd : start+CHUNK_SIZE;
@@ -823,12 +818,10 @@ cluster * create_ctree_ssgeom(cluster *st_clt,        //the current node
 	        }
 	      }
       }
-      if(gn>TH){
-        free(lessNum);
-        free(moreNum);
-        free(lessStart);
-        free(moreStart);
-      }
+      free(lessNum);
+      free(moreNum);
+      free(lessStart);
+      free(moreStart);
     }else{
       while(nl < nr){
 	      while(nl < nd && zgmid[nl][ncut] <= zlmid){
