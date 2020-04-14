@@ -15,11 +15,12 @@
 #include "data/bem_file.h"
 
 #define INPUT_DEFAULT "bem_data/input_50ms.txt"
-#define PN 10000          //TS
-#define PL 100            //TN
+#define PN 200000000          //TS
+#define PL 10             //TN
 #define SL 10000
-#define CHUNK_SIZE 10000000     //C
+#define CHUNK_SIZE 32     //C
 #define TH 1000
+#define MB 25000000
 
 /*********define cluster************/
 typedef struct cluster cluster;
@@ -758,9 +759,9 @@ cluster * create_ctree_ssgeom(cluster *st_clt,        //the current node
     if(nd > PN){
       size_t gn = nd/CHUNK_SIZE+1;
       //size_t asize = (gn > TH) ? 1 : gn;
-      int* restrict lessNum = (int *)malloc((gn+500000)*sizeof(int));
-      int* restrict moreNum = (int *)malloc((gn+500000)*sizeof(int));
-      int* restrict lessStart = (int *)malloc((gn+500000)*sizeof(int));
+      int* restrict lessNum = (int *)malloc((gn)*sizeof(int));
+      int* restrict moreNum = (int *)malloc((gn)*sizeof(int));
+      int* restrict lessStart = (int *)malloc((gn)*sizeof(int));
       int* restrict moreStart = (int *)malloc((gn+500000)*sizeof(int));
       _Cilk_for(id=0;id<gn;id++){
 	      int start = id * CHUNK_SIZE;
@@ -855,8 +856,13 @@ cluster * create_ctree_ssgeom(cluster *st_clt,        //the current node
 	        int nsrt1 = nsrt;
 	        int nd1 = nl;
 	        if(nd1 > PN){
-	          st_clt->pc_sons[0] = _Cilk_spawn create_ctree_ssgeom(st_clt->pc_sons[0],tempzgmid,zgmid,param,
+            if(nd <= MB){
+              st_clt->pc_sons[0] = _Cilk_spawn create_ctree_ssgeom(st_clt->pc_sons[0],tempzgmid,zgmid,param,
 								                                                 ndpth,ndscd,nsrt1,nd1,md,ndim,nclst);
+            }else{
+              st_clt->pc_sons[0] = create_ctree_ssgeom(st_clt->pc_sons[0],tempzgmid,zgmid,param,
+								                                                 ndpth,ndscd,nsrt1,nd1,md,ndim,nclst);
+            }
 	        }else{
 	          if(ndpth & 1){
 	            for(i=0;i<nl;i++){
@@ -864,12 +870,22 @@ cluster * create_ctree_ssgeom(cluster *st_clt,        //the current node
 		            zgmid[i][1] = tempzgmid[i][1];
 		            zgmid[i][2] = tempzgmid[i][2];
 	            }
-	            st_clt->pc_sons[0] = _Cilk_spawn create_ctree_ssgeom(st_clt->pc_sons[0],zgmid,tempzgmid,param,
+              if(nd <= MB){
+	              st_clt->pc_sons[0] = _Cilk_spawn create_ctree_ssgeom(st_clt->pc_sons[0],zgmid,tempzgmid,param,
                                                                    ndpth,ndscd,nsrt1,nd1,md,ndim,nclst);
-	          }else{
-	            st_clt->pc_sons[0] = _Cilk_spawn create_ctree_ssgeom(st_clt->pc_sons[0],tempzgmid,zgmid,param,
-								                                                   ndpth,ndscd,nsrt1,nd1,md,ndim,nclst);
-	          }
+              }else{
+                st_clt->pc_sons[0] = create_ctree_ssgeom(st_clt->pc_sons[0],zgmid,tempzgmid,param,
+                                                                   ndpth,ndscd,nsrt1,nd1,md,ndim,nclst);
+              }
+            }else{
+              if(nd <= MB){
+	              st_clt->pc_sons[0] = _Cilk_spawn create_ctree_ssgeom(st_clt->pc_sons[0],tempzgmid,zgmid,param,
+								                                                     ndpth,ndscd,nsrt1,nd1,md,ndim,nclst);
+              }else{
+                st_clt->pc_sons[0] = create_ctree_ssgeom(st_clt->pc_sons[0],tempzgmid,zgmid,param,
+								                                                     ndpth,ndscd,nsrt1,nd1,md,ndim,nclst);
+              }
+            }
 	        }
 	        nsrt1 = nsrt + nl;
 	        nd1 = nd - nl;
@@ -896,8 +912,13 @@ cluster * create_ctree_ssgeom(cluster *st_clt,        //the current node
           st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
           int nsrt1 = nsrt;
           int nd1 = nl;
-          st_clt->pc_sons[0] = _Cilk_spawn create_ctree_ssgeom(st_clt->pc_sons[0],zgmid,tempzgmid,param,
+          if(nd <= MB){
+            st_clt->pc_sons[0] = _Cilk_spawn create_ctree_ssgeom(st_clt->pc_sons[0],zgmid,tempzgmid,param,
                                                                ndpth,ndscd,nsrt1,nd1,md,ndim,nclst);
+          }else{
+            st_clt->pc_sons[0] = create_ctree_ssgeom(st_clt->pc_sons[0],zgmid,tempzgmid,param,
+                                                               ndpth,ndscd,nsrt1,nd1,md,ndim,nclst);
+          }
 
           nsrt1 = nsrt + nl;
           nd1 = nd - nl;

@@ -11,18 +11,18 @@
 (%defconstant PN 10000)             ;;TS
 (%defconstant PL 10)                ;;TN
 (%defconstant PARA_LEVEL 20)
-(%defconstant CHUNK_SIZE 128)      ;;C
+(%defconstant CHUNK_SIZE 1000)      ;;C
 (%defconstant Check-interval 100)
-(%defconstant MB 25000000)
+(%defconstant MB 49160000)
 
 ;; ; Spherecube
-;;(%defconstant INPUT_DEFAULT "../data_pro1804/input_100ts.txt_cb_1.5_10_10_10.bin")
+;(%defconstant INPUT_DEFAULT "../data_pro1804/input_100ts.txt_cb_1.5_10_10_10.bin")
 ;; ; Spherepyramid
 ;;(%defconstant INPUT_DEFAULT "../data_pro1804/input_100ts.txt_pb_1.5_14.bin")
 ;; ; Sphere
-(%defconstant INPUT_DEFAULT "../data_pro1804/input_50ms.bin")
+;(%defconstant INPUT_DEFAULT "../data_pro1804/input_50ms.bin")
 ;; ; humanoids
-;(%defconstant INPUT_DEFAULT "../data_pro1804/input_human_1x1.txt_cb_0.3_50_100_1.bin")
+(%defconstant INPUT_DEFAULT "../data_pro1804/input_human_1x1.txt_cb_0.3_50_100_1.bin")
 ;(%defconstant INPUT_DEFAULT "../data_pro1804/input_100ts.txt.bin")
 
 (%defconstant NWORKER-MAX 540)
@@ -812,7 +812,7 @@
 	  (def nd1 int nl)
 	  (def nsrt2 int (+ nsrt nl))
 	  (def nd2 int (- nd nl))
-	  (if (> nd PL)
+	  (if (and (> nd PL) (<= nd MB))
 	      (begin ;parallel here
 		(if (<= nd PN)
 		    (begin
@@ -824,15 +824,6 @@
 			     (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref zgmid nl))
 						  (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 			(handles build-cluster
-        (:guard 
-          (def p double 0)
-          (if (> nd MB)
-            (begin
-              (= p 1)
-            )(begin
-              (= p 0)
-            ))
-          p)
 			  (:put
 			    (= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
 			    (= this.zgmid (ptr (aref zgmid nl)))
@@ -859,15 +850,6 @@
 				       (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref tempzgmid nl))
 							    (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 				  (handles build-cluster
-            (:guard 
-              (def p double 0)
-              (if (> nd MB)
-              (begin
-                (= p 1)
-              )(begin
-                (= p 0)
-              ))
-            p)
 				    (:put
 				      (= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
 				      (= this.zgmid (ptr (aref tempzgmid nl)))
@@ -898,15 +880,6 @@
 					   (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref zgmid nl))
 								(ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 				      (handles build-cluster
-              (:guard 
-                (def p double 0)
-                (if (> nd MB)
-                  (begin
-                  (= p 1)
-                )(begin
-                  (= p 0)
-                ))
-              p)
 					(:put
 					  (= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
 					  (= this.zgmid (ptr (aref zgmid nl)))
@@ -936,15 +909,6 @@
 					       (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref tempzgmid nl))
 								    (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 					  (handles build-cluster
-              (:guard 
-              (def p double 0)
-              (if (> nd MB)
-                (begin
-                  (= p 1)
-                )(begin
-                  (= p 0)
-                ))
-              p)
 					    (:put
 					      (= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
 					      (= this.zgmid (ptr (aref tempzgmid nl)))
@@ -975,15 +939,6 @@
 						   (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref zgmid nl))
 									(ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 					      (handles build-cluster
-                (:guard 
-                  (def p double 0)
-                  (if (> nd MB)
-                  (begin
-                    (= p 1)
-                  )(begin
-                    (= p 0)
-                  ))
-                p)
 						(:put
 						  (= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
 						  (= this.zgmid (ptr (aref zgmid nl)))
@@ -1015,15 +970,6 @@
 			       (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref tempzgmid nl))
 						    (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 			  (handles build-cluster
-        (:guard 
-          (def p double 0)
-          (if (> nd MB)
-            (begin
-              (= p 1)
-            )(begin
-              (= p 0)
-            ))
-          p)
 			    (:put
 			      (= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
 			      (= this.zgmid (ptr (aref tempzgmid nl)))
@@ -1135,7 +1081,7 @@
   (return st-clt))
 
 (def (minmax i1 i2 zgmid tsk ndpth nsrt) (wfn void int int (ptr (array double 3)) (ptr (struct minmax)) int int)
-  (csym::fprintf stderr "minmax: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID (+ i1 nsrt) (- (+ i2 nsrt) 1) ndpth)
+  ;(csym::fprintf stderr "minmax: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID (+ i1 nsrt) (- (+ i2 nsrt) 1) ndpth)
   (def il int)
   (def minx double)
   (def miny double)
@@ -1198,7 +1144,7 @@
     )
   )
   (if (> start end) (begin (csym::fprintf stderr "error: start>end~%")))
-  (csym::fprintf stderr "countNum: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID start end ndpth)
+  ;(csym::fprintf stderr "countNum: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID start end ndpth)
   (def id int)
   (do-many for id from i1 to i2
     (if (== 0 (% (- i1 id 1) Check-interval))
@@ -1246,7 +1192,7 @@
     )
   )
   (if (> start end) (begin (csym::fprintf stderr "error: start>end~%")))
-  (csym::fprintf stderr "setStart: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID start end ndpth)
+  ;(csym::fprintf stderr "setStart: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID start end ndpth)
   (def id int)
   (do-many for id from i1 to i2
     (if (== 0 (% (- i1 id 1) Check-interval))
@@ -1295,7 +1241,7 @@
   )
 
 (def (ssum i1 i2 ndpth lessNum) (wfn int int int int (ptr int))
-  (csym::fprintf stderr "ssum: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID i1 i2 ndpth)
+  ;(csym::fprintf stderr "ssum: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID i1 i2 ndpth)
   (def id int)
   (def sum int 0)
   (do-many for id from i1 to i2
