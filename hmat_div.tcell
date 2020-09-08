@@ -1132,6 +1132,77 @@
 	  )
 	)))
   (= (fref (mref st-clt) ndscd) nd)
+  ;;bounding box
+  (= (fref (mref st-clt) bmin) (cast (ptr double) (csym::malloc (* 3 (sizeof double)))))
+  (= (fref (mref st-clt) bmax) (cast (ptr double) (csym::malloc (* 3 (sizeof double)))))
+  (def zeps double 1.0e-5)
+  (if (> (fref (mref st-clt) nnson) 0)
+    (begin
+      (for ((= id 0) (< id ndim) (inc id))
+        (= (aref (fref (mref st-clt) bmin) id)
+          (aref (fref (mref (aref (fref (mref st-clt) pc-sons) 0)) bmin) id))
+        (= (aref (fref (mref st-clt) bmax) id)
+          (aref (fref (mref (aref (fref (mref st-clt) pc-sons) 0)) bmax) id)))
+        (for ((= il 1) (< il (fref (mref st-clt) nnson)) (inc il))
+          (for ((= id 0) (< id ndim) (inc id))
+            (if (< (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmin) id)
+                   (aref (fref (mref st-clt) bmin) id))
+                (begin
+                  (= (aref (fref (mref st-clt) bmin) id)
+                     (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmax) id))))
+            (if (< (aref (fref (mref st-clt) bmax) id)
+                   (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmax) id))
+                (begin
+                  (= (aref (fref (mref st-clt) bmax) id)
+                     (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmax) id)))))))
+      (begin
+        (for ((= id 0) (< id ndim) (inc id))
+          (= (aref (fref (mref st-clt) bmin) id) (aref (aref zgmid 0) id))
+          (= (aref (fref (mref st-clt) bmax) id) (aref (aref zgmid 0) id)))
+        (for ((= id 0) (< id ndim) (inc id))
+          (for ((= il 1) (< il (fref (mref st-clt) nsize)) (inc il))
+            (if (< (aref (aref zgmid il) id)
+                   (aref (fref (mref st-clt) bmin) id))
+                (begin
+                  (= (aref (fref (mref st-clt) bmin) id)
+                     (aref (aref zgmid il) id))))
+            (if (< (aref (fref (mref st-clt) bmax) id)
+                   (aref (aref zgmid il) id))
+                (begin
+                  (= (aref (fref (mref st-clt) bmax) id)
+                     (aref (aref zgmid il) id))))))))
+  (def zwdth double
+    (* (- (aref (fref (mref st-clt) bmax) 0) (aref (fref (mref st-clt) bmin) 0))
+       (- (aref (fref (mref st-clt) bmax) 0) (aref (fref (mref st-clt) bmin) 0))))
+  (for ((= id 1) (< id ndim) (inc id))
+    (= zwdth
+       (+ zwdth
+          (* (- (aref (fref (mref st-clt) bmax) id)
+                (aref (fref (mref st-clt) bmin) id))
+             (- (aref (fref (mref st-clt) bmax) id)
+                (aref (fref (mref st-clt) bmin) id))))))
+  (= zwdth (csym::sqrt zwdth))
+  (for ((= id 0) (< id ndim) (inc id))
+    (def bdiff double
+      (- (aref (fref (mref st-clt) bmax) id) (aref (fref (mref st-clt) bmin) id)))
+    (if (< bdiff (* zeps zwdth))
+        (begin
+          (= (aref (fref (mref st-clt) bmax) id)
+             (+ (aref (fref (mref st-clt) bmax) id)
+                (* 0.5 (- (* zeps zwdth) bdiff))))
+          (= (aref (fref (mref st-clt) bmin) id)
+             (- (aref (fref (mref st-clt) bmin) id)
+                (* 0.5 (- (* zeps zwdth) bdiff)))))))
+  (= zwdth
+     (* (- (aref (fref (mref st-clt) bmax) 0) (aref (fref (mref st-clt) bmin) 0))
+        (- (aref (fref (mref st-clt) bmax) 0) (aref (fref (mref st-clt) bmin) 0))))
+  (for ((= id 1) (< id ndim) (inc id))
+    (= zwdth
+       (* (- (aref (fref (mref st-clt) bmax) id) (aref (fref (mref st-clt) bmin) id))
+          (- (aref (fref (mref st-clt) bmax) id)
+             (aref (fref (mref st-clt) bmin) id)))))
+  (= (fref (mref st-clt) zwdth) (csym::sqrt zwdth))
+  ;;
   (return st-clt))
 
 (def (minmax i1 i2 zgmid tsk ndpth nsrt) (wfn void int int (ptr (array double 3)) (ptr (struct minmax)) int int)

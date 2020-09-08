@@ -18,7 +18,7 @@ hacapk_division_omp
 all: $(TARGETS)
 
 # Serial version
-hmat_div: hmat_div.c data/bem_file.c
+hmat_div: hmat_div_direct.c data/bem_file.c
 	$(CC) $(COPT) -o $@ $^
 
 # Cilk Plus version
