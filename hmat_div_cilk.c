@@ -176,7 +176,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   printf("cluster tree time spent:%.10f\n",spent);
 
   /*****add info of boundary box for cluster*****/
-  set_bndbox_cog(st_clt,gmid,nofc);
+  //set_bndbox_cog(st_clt,gmid,nofc);
 
   ndpth = 0;
   free(tempgmid);
@@ -988,6 +988,59 @@ cluster * create_ctree_ssgeom(double (*zgmid)[3],     //coordination of objects
     }
   }
   st_clt->ndscd = nd;
+  //bounding box
+  st_clt->bmin = (double *)malloc(3*sizeof(double));
+  st_clt->bmax = (double *)malloc(3*sizeof(double));
+  double zeps = 1.0e-5;
+  if(st_clt->nnson > 0){
+    for(id=0;id<ndim;id++){
+      st_clt->bmin[id] = st_clt->pc_sons[0]->bmin[id];
+      st_clt->bmax[id] = st_clt->pc_sons[0]->bmax[id];
+    }
+    for(il=1;il<st_clt->nnson;il++){
+      for(id=0;id<ndim;id++){
+	if(st_clt->pc_sons[il]->bmin[id] < st_clt->bmin[id]){
+	  st_clt->bmin[id] = st_clt->pc_sons[il]->bmax[id];
+	}
+	if(st_clt->bmax[id] < st_clt->pc_sons[il]->bmax[id]){
+	  st_clt->bmax[id] = st_clt->pc_sons[il]->bmax[id];
+	}
+      }
+    }
+  }else{
+    for(id=0;id<ndim;id++){
+      st_clt->bmin[id] = zgmid[0][id];
+      st_clt->bmax[id] = zgmid[0][id];
+    }
+    for(id=0;id<ndim;id++){
+      for(il=1;il<st_clt->nsize;il++){
+	if(zgmid[il][id] < st_clt->bmin[id]){
+	  st_clt->bmin[id] = zgmid[il][id];
+	}
+	if(st_clt->bmax[id] < zgmid[il][id]){
+	  st_clt->bmax[id] = zgmid[il][id];
+	}
+      }
+    }
+  }
+  double zwdth = (st_clt->bmax[0] - st_clt->bmin[0]) * (st_clt->bmax[0] - st_clt->bmin[0]);
+  for(id=1;id<ndim;id++){
+    zwdth = zwdth + (st_clt->bmax[id] - st_clt->bmin[id]) * (st_clt->bmax[id] - st_clt->bmin[id]);
+  }
+  zwdth = sqrt(zwdth);
+  for(id=0;id<ndim;id++){
+    double bdiff = st_clt->bmax[id] - st_clt->bmin[id];
+    if(bdiff < zeps * zwdth){
+      st_clt->bmax[id] = st_clt->bmax[id] + 0.5 * (zeps * zwdth - bdiff);
+      st_clt->bmin[id] = st_clt->bmin[id] - 0.5 * (zeps * zwdth - bdiff);
+    }
+  }
+  zwdth = (st_clt->bmax[0] - st_clt->bmin[0]) * (st_clt->bmax[0] - st_clt->bmin[0]);
+  for(id=1;id<ndim;id++){
+    zwdth = (st_clt->bmax[id] - st_clt->bmin[id]) * (st_clt->bmax[id] - st_clt->bmin[id]);
+  }
+  st_clt->zwdth = sqrt(zwdth);
+  //end of bounding box
   return st_clt;
 }
 
