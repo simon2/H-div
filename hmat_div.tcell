@@ -15,6 +15,8 @@
 (%defconstant Check-interval 100)
 (%defconstant MB 25000000)
 
+(%defconstant TCELL-CHECK-REQ 1)
+
 ;; ; Spherecube
 ;;(%defconstant INPUT_DEFAULT "../data_pro1804/input_100ts.txt_cb_1.5_10_10_10.bin")
 ;; ; Spherepyramid
@@ -23,6 +25,7 @@
 (%defconstant INPUT_DEFAULT "../data_pro1804/input_50ms.bin")
 ;; ; humanoids
 ;(%defconstant INPUT_DEFAULT "../data_pro1804/input_human_1x1.txt_cb_0.3_50_100_1.bin")
+;; ; small dataset for debug, N=1000
 ;(%defconstant INPUT_DEFAULT "../data_pro1804/input_100ts.txt.bin")
 
 (%defconstant NWORKER-MAX 540)
@@ -88,7 +91,7 @@
   (def r int))
 
 (def (task build-cluster)
-  (def st-clt (ptr cluster) :in)
+  ;;(def st-clt (ptr cluster) :in)
   (def zgmid (ptr (array double 3)) :in)
   (def tempzgmid (ptr (array double 3)) :in)
   (def ndpth int :in)
@@ -175,8 +178,8 @@
     (fn (ptr cluster) int int int int int int))
 (decl (csym::free-st-clt st-clt)
     (fn void (ptr cluster)))
-(decl (create-ctree-ssgeom st-clt zgmid tempzgmid ndpth ndscd nsrt nd md nclst)
-    (wfn (ptr cluster) (ptr cluster) (ptr (array double 3)) (ptr (array double 3)) int int int int int int))
+(decl (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt nd md nclst)
+    (wfn (ptr cluster) (ptr (array double 3)) (ptr (array double 3)) int int int int int int))
 (decl (csym::get-wall-time) (fn double))
 (decl (csym::get-cpu-time) (fn double))
 (decl (csym::checkClusterTree f st-clt) (fn void (ptr FILE) (ptr cluster)))
@@ -201,7 +204,7 @@
 )
 
 (def (task-body build-cluster)
-  (= this.r (create-ctree-ssgeom this.st-clt this.zgmid this.tempzgmid this.ndpth 
+  (= this.r (create-ctree-ssgeom this.zgmid this.tempzgmid this.ndpth 
 				 this.ndscd this.nsrt this.nd this.md this.nclst)))
 
 (def (task-body minmax)
@@ -248,7 +251,7 @@
       (= count bi.nFace)
       (= coordOfFace bi.coordOfFace)
       ))
-  (csym::fprintf stderr "1~%")
+  ;(csym::fprintf stderr "1~%")
   (csym::fclose file)
   (csym::free coordOfNode)
   (for ((= i 0) (< i 100) (inc i))
@@ -272,14 +275,15 @@
   (= lod (cast (ptr int) (csym::malloc (* nofc (sizeof int)))))
   (for ((= i 0) (< i nofc) (inc i))
     (= (aref lod i) 0))
-  (csym::fprintf stderr "2~%")
+  ;(csym::fprintf stderr "2~%")
   (supermatrix-construction-cog-leafmtrx st-leafmtxp coordOfFace param lod lnmtx
                                          nofc nffc ndim)
   (return 0))
 
 (def (supermatrix-construction-cog-leafmtrx st-leafmtxp gmid param lod lnmtx nofc nffc ndim)
     (wfn void (ptr leafmtxp) (ptr (array double 3)) (array double) (ptr int) (ptr int) int int int)
-  (def st-clt (ptr cluster) (cast (ptr cluster) (csym::malloc (sizeof cluster))))
+  ;;(def st-clt (ptr cluster) (cast (ptr cluster) (csym::malloc (sizeof cluster))))
+  (def st-clt (ptr cluster))
   (decl i int)
   (decl nfl int)
   (decl nflkt int)
@@ -304,20 +308,20 @@
   (decl spent double)
 
   (decl tempgmid (ptr (array double 3)))
-  (csym::fprintf stderr "3~%")
+  ;(csym::fprintf stderr "3~%")
   (= tempgmid (cast (ptr (array double 3))
 		(csym::malloc (* (* nofc 3) (sizeof double)))))
-  (csym::fprintf stderr "4~%")
+  ;(csym::fprintf stderr "4~%")
 
-  (csym::fprintf stderr "test!~%")
+  ;(csym::fprintf stderr "test!~%")
   (= start (csym::get-wall-time))
   (= st-clt
-     (create-ctree-ssgeom st-clt gmid tempgmid ndpth ndscd nsrt
+     (create-ctree-ssgeom gmid tempgmid ndpth ndscd nsrt
                           ndf nofc nclst))
   (= end (csym::get-wall-time))
   (= spent (- end start))
   (csym::fprintf stderr "cluster tree time spent:%.10lf~%" spent)
-  (csym::set-bndbox-cog st-clt gmid nofc)
+  ;;(csym::set-bndbox-cog st-clt gmid nofc)
   (= ndpth 0)
   (= start (csym::get-wall-time))
   (csym::count-lntmx st-clt st-clt param lnmtx nffc)
@@ -645,7 +649,8 @@
        (* (- (aref (fref (mref st-clt) bmax) id) (aref (fref (mref st-clt) bmin) id))
           (- (aref (fref (mref st-clt) bmax) id)
              (aref (fref (mref st-clt) bmin) id)))))
-  (= (fref (mref st-clt) zwdth) (csym::sqrt zwdth)))
+  (= (fref (mref st-clt) zwdth) (csym::sqrt zwdth))
+)
 
 (def (csym::set-bndbox-cog st-clt zgmid nofc)
     (fn void (ptr cluster) (ptr (array double 3)) int) (decl ic int) (decl l int)
@@ -664,9 +669,10 @@
   (= (fref (mref st-clt) nstrt) nstrt) (= (fref (mref st-clt) nsize) nsize)
   (= (fref (mref st-clt) ndim) ndim) (= (fref (mref st-clt) nnson) nson)
   (= (fref (mref st-clt) nmbr) nmbr) (= (fref (mref st-clt) ndpth) ndpth)
-  (= (fref (mref st-clt) pc-sons)
-     (cast (ptr (ptr cluster)) (csym::malloc (* nson (sizeof (ptr cluster))))))
-  (return st-clt))
+  ;;(= (fref (mref st-clt) pc-sons)
+  ;;   (cast (ptr (ptr cluster)) (csym::malloc (* nson (sizeof (ptr cluster))))))
+  (return st-clt)
+)
 
 (def (csym::free-st-clt st-clt) (fn void (ptr cluster))
   (decl ic int)
@@ -675,7 +681,8 @@
     (free-st-clt (aref (fref (mref st-clt) pc-sons) ic)))
   (csym::free (fref (mref st-clt) bmin))
   (csym::free (fref (mref st-clt) bmax))
-  (csym::free (fref (mref st-clt) pc-sons)))
+  (csym::free (fref (mref st-clt) pc-sons))
+)
 
 (def (csym::checkClusterTree f st-clt) (fn void (ptr FILE) (ptr cluster))
   (if (< (fref (mref st-clt) ndpth) 11)
@@ -693,8 +700,8 @@
           (begin (csym::checkClusterTree f (aref (fref (mref st-clt) pc-sons) 0))
                  (csym::checkClusterTree f (aref (fref (mref st-clt) pc-sons) 1))))))
 
-(def (create-ctree-ssgeom st-clt zgmid tempzgmid ndpth ndscd nsrt nd md nclst)
-    (wfn (ptr cluster) (ptr cluster) (ptr (array double 3)) (ptr (array double 3))
+(def (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt nd md nclst)
+    (wfn (ptr cluster) (ptr (array double 3)) (ptr (array double 3))
         int int int int int int)
   (decl i int)
   (decl id int)
@@ -704,6 +711,7 @@
   (def zcoef double (aref param 31))
   (decl zlmin (array double ndim))
   (decl zlmax (array double ndim))
+  (def st-clt (ptr cluster))
 
   (= ndpth (+ ndpth 1))
   (if (<= nd minsz)
@@ -808,6 +816,7 @@
 	(begin
 	  (= nson 2)
 	  (= st-clt (create-cluster nclst ndpth nsrt nd ndim nson))
+    (= (fref (mref st-clt) pc-sons) (cast (ptr (ptr cluster)) (csym::malloc (* nson (sizeof (ptr cluster))))))
 	  (def nsrt1 int nsrt)
 	  (def nd1 int nl)
 	  (def nsrt2 int (+ nsrt nl))
@@ -818,23 +827,13 @@
 		    (begin
 		      (do-two
 			  (= (aref (fref (mref st-clt) pc-sons) 0)
-			     (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 0) zgmid tempzgmid
-						  ndpth ndscd nsrt1 nd1 md nclst))
+			     (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst))
 			  (= (aref (fref (mref st-clt) pc-sons) 1)
-			     (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref zgmid nl))
-						  (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
+			     (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 			(handles build-cluster
-        (:guard 
-          (def p double 0)
-          (if (> nd MB)
-            (begin
-              (= p 1)
-            )(begin
-              (= p 0)
-            ))
-          p)
+        ;;(:guard (def p double 0)(if (> nd MB)(begin(= p 1))(begin(= p 0)))p)
 			  (:put
-			    (= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
+			    ;;(= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
 			    (= this.zgmid (ptr (aref zgmid nl)))
 			    (= this.tempzgmid (ptr (aref tempzgmid nl)))
 			    (= this.ndpth ndpth)
@@ -853,23 +852,13 @@
 			      (begin
 				(do-two
 				    (= (aref (fref (mref st-clt) pc-sons) 0)
-				       (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 0) tempzgmid zgmid
-							    ndpth ndscd nsrt1 nd1 md nclst))
+				       (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst))
 				    (= (aref (fref (mref st-clt) pc-sons) 1)
-				       (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref tempzgmid nl))
-							    (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
+				       (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 				  (handles build-cluster
-            (:guard 
-              (def p double 0)
-              (if (> nd MB)
-              (begin
-                (= p 1)
-              )(begin
-                (= p 0)
-              ))
-            p)
+            ;;(:guard (def p double 0)(if (> nd MB)(begin(= p 1))(begin(= p 0)))p)
 				    (:put
-				      (= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
+				      ;;(= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
 				      (= this.zgmid (ptr (aref tempzgmid nl)))
 				      (= this.tempzgmid (ptr (aref zgmid nl)))
 				      (= this.ndpth ndpth)
@@ -892,23 +881,13 @@
 				      )
 				    (do-two
 					(= (aref (fref (mref st-clt) pc-sons) 0)
-					   (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 0) zgmid tempzgmid
-								ndpth ndscd nsrt1 nd1 md nclst))
+					   (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst))
 					(= (aref (fref (mref st-clt) pc-sons) 1)
-					   (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref zgmid nl))
-								(ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
+					   (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 				      (handles build-cluster
-              (:guard 
-                (def p double 0)
-                (if (> nd MB)
-                  (begin
-                  (= p 1)
-                )(begin
-                  (= p 0)
-                ))
-              p)
+              ;;(:guard (def p double 0)(if (> nd MB)(begin(= p 1))(begin(= p 0)))p)
 					(:put
-					  (= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
+					  ;;(= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
 					  (= this.zgmid (ptr (aref zgmid nl)))
 					  (= this.tempzgmid (ptr (aref tempzgmid nl)))
 					  (= this.ndpth ndpth)
@@ -930,23 +909,13 @@
 					  )
 					(do-two
 					    (= (aref (fref (mref st-clt) pc-sons) 0)
-					       (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 0) zgmid tempzgmid
-								    ndpth ndscd nsrt1 nd1 md nclst))
+					       (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst))
 					    (= (aref (fref (mref st-clt) pc-sons) 1)
-					       (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref tempzgmid nl))
-								    (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
+					       (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 					  (handles build-cluster
-              (:guard 
-              (def p double 0)
-              (if (> nd MB)
-                (begin
-                  (= p 1)
-                )(begin
-                  (= p 0)
-                ))
-              p)
+              ;;(:guard (def p double 0)(if (> nd MB)(begin(= p 1))(begin(= p 0)))p)
 					    (:put
-					      (= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
+					      ;;(= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
 					      (= this.zgmid (ptr (aref tempzgmid nl)))
 					      (= this.tempzgmid (ptr (aref zgmid nl)))
 					      (= this.ndpth ndpth)
@@ -969,23 +938,13 @@
 					      )
 					    (do-two
 						(= (aref (fref (mref st-clt) pc-sons) 0)
-						   (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 0) tempzgmid zgmid
-									ndpth ndscd nsrt1 nd1 md nclst))
+						   (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst))
 						(= (aref (fref (mref st-clt) pc-sons) 1)
-						   (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref zgmid nl))
-									(ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
+						   (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 					      (handles build-cluster
-                (:guard 
-                  (def p double 0)
-                  (if (> nd MB)
-                  (begin
-                    (= p 1)
-                  )(begin
-                    (= p 0)
-                  ))
-                p)
+                ;;(:guard (def p double 0)(if (> nd MB)(begin(= p 1))(begin(= p 0)))p)
 						(:put
-						  (= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
+						  ;;(= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
 						  (= this.zgmid (ptr (aref zgmid nl)))
 						  (= this.tempzgmid (ptr (aref tempzgmid nl)))
 						  (= this.ndpth ndpth)
@@ -1009,23 +968,13 @@
 		      (begin ;is even and exchange place
 			(do-two
 			    (= (aref (fref (mref st-clt) pc-sons) 0)
-			       (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 0) tempzgmid zgmid
-						    ndpth ndscd nsrt1 nd1 md nclst))
+			       (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst))
 			    (= (aref (fref (mref st-clt) pc-sons) 1)
-			       (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref tempzgmid nl))
-						    (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
+			       (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 			  (handles build-cluster
-        (:guard 
-          (def p double 0)
-          (if (> nd MB)
-            (begin
-              (= p 1)
-            )(begin
-              (= p 0)
-            ))
-          p)
+        ;;(:guard (def p double 0)(if (> nd MB)(begin(= p 1))(begin(= p 0)))p)
 			    (:put
-			      (= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
+			      ;;(= this.st-clt (aref (fref (mref st-clt) pc-sons) 1))
 			      (= this.zgmid (ptr (aref tempzgmid nl)))
 			      (= this.tempzgmid (ptr (aref zgmid nl)))
 			      (= this.ndpth ndpth)
@@ -1045,11 +994,9 @@
 	      (if (<= nd PN)
 		  (begin
 		    (= (aref (fref (mref st-clt) pc-sons) 0)
-		       (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 0) zgmid tempzgmid
-					    ndpth ndscd nsrt1 nd1 md nclst))
+		       (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst))
 		    (= (aref (fref (mref st-clt) pc-sons) 1)
-		       (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref zgmid nl))
-					    (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
+		       (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 		    )
 		(begin
 		  (if (bit-and ndpth 1)
@@ -1057,11 +1004,9 @@
 			(if (and (> nd1 PN) (> nd2 PN))
 			    (begin
 			      (= (aref (fref (mref st-clt) pc-sons) 0)
-				 (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 0) tempzgmid zgmid
-						      ndpth ndscd nsrt1 nd1 md nclst))
+				 (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst))
 			      (= (aref (fref (mref st-clt) pc-sons) 1)
-				 (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref tempzgmid nl))
-						      (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
+				 (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 			      )
 			  (begin
 			    (if (and (<= nd1 PN) (<= nd2 PN))
@@ -1072,11 +1017,9 @@
 				    (= (aref (aref zgmid i) 2) (aref (aref tempzgmid i) 2))
 				    )
 				  (= (aref (fref (mref st-clt) pc-sons) 0)
-				     (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 0) zgmid tempzgmid
-							  ndpth ndscd nsrt1 nd1 md nclst))
+				     (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst))
 				  (= (aref (fref (mref st-clt) pc-sons) 1)
-				     (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref zgmid nl))
-							  (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
+				     (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 				  )
 			      (begin
 				(if (and (<= nd1 PN) (> nd2 PN))
@@ -1087,11 +1030,9 @@
 					(= (aref (aref zgmid i) 2) (aref (aref tempzgmid i) 2))
 					)
 				      (= (aref (fref (mref st-clt) pc-sons) 0)
-					 (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 0) zgmid
-							      tempzgmid ndpth ndscd nsrt1 nd1 md nclst))
+					 (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst))
 				      (= (aref (fref (mref st-clt) pc-sons) 1)
-					 (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref tempzgmid nl))
-							      (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
+					 (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 				      )
 				  (begin
 				    (if (and (> nd1 PN) (<= nd2 PN))
@@ -1102,11 +1043,9 @@
 					    (= (aref (aref zgmid i) 2) (aref (aref tempzgmid i) 2))
 					    )
 					  (= (aref (fref (mref st-clt) pc-sons) 0)
-					     (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 0) tempzgmid zgmid
-								  ndpth ndscd nsrt1 nd1 md nclst))
+					     (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst))
 					  (= (aref (fref (mref st-clt) pc-sons) 1)
-					     (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref zgmid nl))
-								  (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
+					     (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 					  )
 				      )
 				    )
@@ -1118,11 +1057,9 @@
 			)
 		    (begin ;is even and exchange place
 		      (= (aref (fref (mref st-clt) pc-sons) 0)
-			 (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 0) tempzgmid zgmid
-					      ndpth ndscd nsrt1 nd1 md nclst))
+			 (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst))
 		      (= (aref (fref (mref st-clt) pc-sons) 1)
-			 (create-ctree-ssgeom (aref (fref (mref st-clt) pc-sons) 1) (ptr (aref tempzgmid nl))
-					      (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
+			 (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst))
 		      )
                     )
 		  )
@@ -1139,48 +1076,54 @@
   (if (> (fref (mref st-clt) nnson) 0)
     (begin
       (for ((= id 0) (< id ndim) (inc id))
-        (= (aref (fref (mref st-clt) bmin) id)
-          (aref (fref (mref (aref (fref (mref st-clt) pc-sons) 0)) bmin) id))
-        (= (aref (fref (mref st-clt) bmax) id)
-          (aref (fref (mref (aref (fref (mref st-clt) pc-sons) 0)) bmax) id)))
-        (for ((= il 1) (< il (fref (mref st-clt) nnson)) (inc il))
-          (for ((= id 0) (< id ndim) (inc id))
-            (if (< (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmin) id)
-                   (aref (fref (mref st-clt) bmin) id))
-                (begin
-                  (= (aref (fref (mref st-clt) bmin) id)
-                     (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmax) id))))
-            (if (< (aref (fref (mref st-clt) bmax) id)
-                   (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmax) id))
-                (begin
-                  (= (aref (fref (mref st-clt) bmax) id)
-                     (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmax) id)))))))
-      (begin
+        (= (aref (fref (mref st-clt) bmin) id) (aref (fref (mref (aref (fref (mref st-clt) pc-sons) 0)) bmin) id))
+        (= (aref (fref (mref st-clt) bmax) id) (aref (fref (mref (aref (fref (mref st-clt) pc-sons) 0)) bmax) id))
+      )
+      (for ((= il 1) (< il (fref (mref st-clt) nnson)) (inc il))
         (for ((= id 0) (< id ndim) (inc id))
-          (= (aref (fref (mref st-clt) bmin) id) (aref (aref zgmid 0) id))
-          (= (aref (fref (mref st-clt) bmax) id) (aref (aref zgmid 0) id)))
-        (for ((= id 0) (< id ndim) (inc id))
-          (for ((= il 1) (< il (fref (mref st-clt) nsize)) (inc il))
-            (if (< (aref (aref zgmid il) id)
-                   (aref (fref (mref st-clt) bmin) id))
-                (begin
-                  (= (aref (fref (mref st-clt) bmin) id)
-                     (aref (aref zgmid il) id))))
-            (if (< (aref (fref (mref st-clt) bmax) id)
-                   (aref (aref zgmid il) id))
-                (begin
-                  (= (aref (fref (mref st-clt) bmax) id)
-                     (aref (aref zgmid il) id))))))))
-  (def zwdth double
-    (* (- (aref (fref (mref st-clt) bmax) 0) (aref (fref (mref st-clt) bmin) 0))
-       (- (aref (fref (mref st-clt) bmax) 0) (aref (fref (mref st-clt) bmin) 0))))
+          (if (< (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmin) id) (aref (fref (mref st-clt) bmin) id))
+            (begin
+              (= (aref (fref (mref st-clt) bmin) id) (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmax) id))
+            )
+          )
+          (if (< (aref (fref (mref st-clt) bmax) id) (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmax) id))
+            (begin
+              (= (aref (fref (mref st-clt) bmax) id) (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmax) id))
+            )
+          )
+        )
+      )
+    )
+    (begin
+      (for ((= id 0) (< id ndim) (inc id))
+        (= (aref (fref (mref st-clt) bmin) id) (aref (aref zgmid 0) id))
+        (= (aref (fref (mref st-clt) bmax) id) (aref (aref zgmid 0) id))
+      )
+      (for ((= id 0) (< id ndim) (inc id))
+        (for ((= il 1) (< il (fref (mref st-clt) nsize)) (inc il))
+          (if (< (aref (aref zgmid il) id) (aref (fref (mref st-clt) bmin) id))
+            (begin
+              (= (aref (fref (mref st-clt) bmin) id) (aref (aref zgmid il) id))
+            )
+          )
+          (if (< (aref (fref (mref st-clt) bmax) id) (aref (aref zgmid il) id))
+            (begin
+              (= (aref (fref (mref st-clt) bmax) id) (aref (aref zgmid il) id))
+            )
+          )
+        )
+      )
+    )
+  )
+  (def zwdth double (* (- (aref (fref (mref st-clt) bmax) 0) (aref (fref (mref st-clt) bmin) 0)) (- (aref (fref (mref st-clt) bmax) 0) (aref (fref (mref st-clt) bmin) 0))))
   (for ((= id 1) (< id ndim) (inc id))
     (= zwdth
        (+ zwdth
           (* (- (aref (fref (mref st-clt) bmax) id)
                 (aref (fref (mref st-clt) bmin) id))
              (- (aref (fref (mref st-clt) bmax) id)
-                (aref (fref (mref st-clt) bmin) id))))))
+                (aref (fref (mref st-clt) bmin) id)))))
+  )
   (= zwdth (csym::sqrt zwdth))
   (for ((= id 0) (< id ndim) (inc id))
     (def bdiff double
@@ -1202,11 +1145,11 @@
           (- (aref (fref (mref st-clt) bmax) id)
              (aref (fref (mref st-clt) bmin) id)))))
   (= (fref (mref st-clt) zwdth) (csym::sqrt zwdth))
-  ;;
+  ;;end of bounding box
   (return st-clt))
 
 (def (minmax i1 i2 zgmid tsk ndpth nsrt) (wfn void int int (ptr (array double 3)) (ptr (struct minmax)) int int)
-  (csym::fprintf stderr "minmax: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID (+ i1 nsrt) (- (+ i2 nsrt) 1) ndpth)
+  ;;(csym::fprintf stderr "minmax: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID (+ i1 nsrt) (- (+ i2 nsrt) 1) ndpth)
   (def il int)
   (def minx double)
   (def miny double)
@@ -1269,7 +1212,7 @@
     )
   )
   (if (> start end) (begin (csym::fprintf stderr "error: start>end~%")))
-  (csym::fprintf stderr "countNum: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID start end ndpth)
+  ;;(csym::fprintf stderr "countNum: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID start end ndpth)
   (def id int)
   (do-many for id from i1 to i2
     (if (== 0 (% (- i1 id 1) Check-interval))
@@ -1317,7 +1260,7 @@
     )
   )
   (if (> start end) (begin (csym::fprintf stderr "error: start>end~%")))
-  (csym::fprintf stderr "setStart: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID start end ndpth)
+  ;;(csym::fprintf stderr "setStart: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID start end ndpth)
   (def id int)
   (do-many for id from i1 to i2
     (if (== 0 (% (- i1 id 1) Check-interval))
@@ -1366,7 +1309,7 @@
   )
 
 (def (ssum i1 i2 ndpth lessNum) (wfn int int int int (ptr int))
-  (csym::fprintf stderr "ssum: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID i1 i2 ndpth)
+  ;;(csym::fprintf stderr "ssum: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID i1 i2 ndpth)
   (def id int)
   (def sum int 0)
   (do-many for id from i1 to i2
