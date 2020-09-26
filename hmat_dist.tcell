@@ -120,6 +120,8 @@
   (def ndim int :in)
   (def r int :out)
   (def rank int :out)
+  (def bmin (ptr double))
+  (def bmax (ptr double))
   ;;(def offset int :out)
 )
 
@@ -148,12 +150,26 @@
   (if (== flag 0)
     (begin 
       (= privateCTlist (cast (ptr cluster) (csym::malloc (* (sizeof cluster) LN))))
+      (def comm_size int)
+      (def my_rank int)
+      (csym::MPI_Comm_size MPI_COMM_WORLD (ptr comm_size))
+      (csym::MPI_Comm_rank MPI_COMM_WORLD (ptr my_rank))
+      (= length_list (cast (ptr int) (csym::malloc (* (sizeof int) comm_size))))
+      ;;add MPI_Allgather() for all nodes exept rank0 here by using pthread.
+      (if (not (== my_rank 0))
+        (begin 
+          (pthread_create (ptr mpi_thread) NULL my-allgather NULL)
+        )
+      )
       (= flag 1)
     )
   )
 )
 
 (def (rslt-sender build-cluster)
+  ;;(csym::fprintf stderr "this.r = %ld~%" this.r)
+  (csym::send-doubles (fref (aref privateCTlist this.r) bmax) 3)
+  (csym::send-doubles (fref (aref privateCTlist this.r) bmin) 3)
   ;;(def ret int)
   ;;(csym::send_binary_header (sizeof (ptr int)) 1)
   ;;(= ret (csym::send_binary this.r (sizeof (ptr int)) 1 sv_socket))
@@ -167,6 +183,13 @@
   ;;(= swp (csym::recv_binary_header 0 0))
   ;;(= ret (csym::receive_binary (ptr this.r) (sizeof (ptr cluster)) 1 sv_socket))
   ;;(csym::recv_binary_terminator)
+  (def tempcluster (ptr cluster))
+  ;;(csym::fprintf stderr "this.r = %ld~%" this.r)
+  (= tempcluster (ptr (aref privateCTlist this.r)))
+  (= (fref (mref tempcluster) bmax) (cast (ptr double) (csym::malloc (* 3 (sizeof double)))))
+  (= (fref (mref tempcluster) bmin) (cast (ptr double) (csym::malloc (* 3 (sizeof double)))))
+  (csym::recv-doubles (fref (mref tempcluster) bmax) 3)
+  (csym::recv-doubles (fref (mref tempcluster) bmin) 3)
 )
 
 (def (task minmax)
@@ -267,6 +290,14 @@
 (def flag int 0)
 (def privateCTlist (ptr cluster))
 (def countPCT (atomic_int) (ATOMIC_VAR_INIT 0))
+(def length_list (ptr int))
+(def mpi_thread pthread_t)
+(def pre (ptr int))
+(def total_length int)
+
+;;MPI customize type define
+(def MPI_cluster MPI_Datatype)
+
 
 (def (task-body create-leafmtx)
   (create_leafmtx this.st-cltl this.st-cltt this.i1 this.i2))
@@ -280,7 +311,7 @@
 				 this.ndscd this.nsrt this.nd this.md this.nclst this.ndim))
   (def my_rank int)
   (csym::MPI_Comm_rank MPI_COMM_WORLD (ptr my_rank))
-  (= this.rank my_rank)         
+  (= this.rank my_rank)
 )
 
 (def (task-body minmax)
@@ -398,17 +429,59 @@
   (if (== flag 0)
     (begin
       (= privateCTlist (cast (ptr cluster) (csym::malloc (* (sizeof cluster) LN))))
+      (def comm_size int)
+      (csym::MPI_Comm_size MPI_COMM_WORLD (ptr comm_size))
+      (= length_list (cast (ptr int) (csym::malloc (* (sizeof int) comm_size))))
       (= flag 1)
     )
   )
-  ;;================ MPI code ======================
+
   (= start (csym::get-wall-time))
   (= st-clt (create-ctree-ssgeom gmid tempgmid ndpth ndscd nsrt ndf nofc nclst ndim))
-  (csym::fprintf stderr "node0: countCT=%d~%" (atomic_load (ptr countPCT)))
+  ;;(csym::fprintf stderr "node0: countCT=%d~%" (atomic_load (ptr countPCT)))
+  ;;================ MPI code ======================
+  (def comm_size int)
+  (def my_rank int)
+  (csym::MPI_Comm_size MPI_COMM_WORLD (ptr comm_size))
+  (csym::MPI_Comm_rank MPI_COMM_WORLD (ptr my_rank))
+  (csym::MPI_Barrier MPI_COMM_WORLD)
+  (csym::MPI_Allgather (ptr countPCT) 1 MPI_INT length_list comm_size MPI_INT MPI_COMM_WORLD)
+  ;;prefix-sum
+  (= pre (cast (ptr int) (csym::malloc (* (sizeof int) comm_size))))
+  (= (aref pre 0) 0)
+  (for ((= il 0) (< il comm_size) (inc il))
+    (= (aref pre (+ il 1)) (+ (aref pre il) (aref length_list il)))
+  )
+  (= total_length (+ (aref pre (- comm_size 1)) (aref length_list (- comm_size 1))))
+  ;;(csym::fprintf stderr "rankid %d: total is %d!~%" my_rank total_length)
+  (def countR int)
+  (= countR (atomic_load (ptr countPCT)))
+  ;;(csym::fprintf stderr "rankid %d: countR is %d!~%" my_rank countR)
+  (for ((= il 0) (< il countR) (inc il))
+    (if (== (fref (aref privateCTlist il) left_son_node) -1)
+      (begin
+        (= (aref (fref (aref privateCTlist il) offsets) 0) (+ (aref (fref (aref privateCTlist il) offsets) 0) (aref pre my_rank)))
+      )
+      (begin
+        (= (aref (fref (aref privateCTlist il) offsets) 0) (+ (aref (fref (aref privateCTlist il) offsets) 0) (aref pre (fref (aref privateCTlist il) left_son_node))))
+      )
+    )
+    (if (== (fref (aref privateCTlist il) right_son_node) -1)
+      (begin
+        (= (aref (fref (aref privateCTlist il) offsets) 1) (+ (aref (fref (aref privateCTlist il) offsets) 1) (aref pre my_rank)))
+      )
+      (begin
+        ;;(csym::fprintf stderr "rank0: inter-node offset happened right at il:%d~%" il)
+        (= (aref (fref (aref privateCTlist il) offsets) 1) (+ (aref (fref (aref privateCTlist il) offsets) 1) (aref pre (fref (aref privateCTlist il) right_son_node))))
+      )
+    )
+  )
+  (csym::MPI_Barrier MPI_COMM_WORLD)
+  ;;================ End MPI code ==================
   (= end (csym::get-wall-time))
   (= spent (- end start))
   (csym::sleep 10)
-  ;;================ End MPI code ====================== 
+   
   (csym::fprintf stderr "cluster tree time spent:%.10lf~%" spent)
   ;;(csym::set-bndbox-cog st-clt gmid nofc)
   ;;(= ndpth 0)
@@ -816,6 +889,11 @@
     (begin 
       (= nson 0)
       (= st-clt (csym::create-cluster nclst ndpth nsrt nd ndim nson))
+      (def tempcluster (ptr cluster))
+      (= tempcluster (ptr (aref privateCTlist st-clt)))
+      (= (fref (mref tempcluster) offsets) (cast (ptr int) (csym::malloc (* nson (sizeof int)))))
+      (= (aref (fref (mref tempcluster) offsets) 0) -1)
+      (= (aref (fref (mref tempcluster) offsets) 1) -1)
     )
     (begin
       (if (> nd PN)
@@ -893,7 +971,7 @@
           (free lessNum)
 	        (free moreNum)
 	        (free lessStart)
-	        (free moreStart)
+	        (free moreStart) 
 	      )
 	      (begin 
 	        (while (< nl nr)
@@ -924,11 +1002,18 @@
 			    ;;		  ndpth ndscd nsrt nd md nclst)))|#
 	        (= nson 0)
 	        (= st-clt (csym::create-cluster nclst ndpth nsrt nd ndim nson))
+          (def tempcluster (ptr cluster))
+          (= tempcluster (ptr (aref privateCTlist st-clt)))
+          (= (fref (mref tempcluster) offsets) (cast (ptr int) (csym::malloc (* nson (sizeof int)))))
+          (= (aref (fref (mref tempcluster) offsets) 0) -1)
+          (= (aref (fref (mref tempcluster) offsets) 1) -1)
         )
 	      (begin
 	        (= nson 2)
 	        (= st-clt (create-cluster nclst ndpth nsrt nd ndim nson))
-          (= (fref (aref privateCTlist st-clt) offsets) (cast (ptr int) (csym::malloc (* nson (sizeof int)))))
+          (def tempcluster (ptr cluster))
+          (= tempcluster (ptr (aref privateCTlist st-clt)))
+          (= (fref (mref tempcluster) offsets) (cast (ptr int) (csym::malloc (* nson (sizeof int)))))
 	        (def nsrt1 int nsrt)
 	        (def nd1 int nl)
 	        (def nsrt2 int (+ nsrt nl))
@@ -938,8 +1023,8 @@
 		          (if (<= nd PN)
 		            (begin
 		              (do-two
-			              (= (aref (fref (aref privateCTlist st-clt) offsets) 0) (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
-			              (= (aref (fref (aref privateCTlist st-clt) offsets) 1) (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
+			              (= (aref (fref (mref tempcluster) offsets) 0) (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
+			              (= (aref (fref (mref tempcluster) offsets) 1) (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
 			              (handles build-cluster
                       ;;(:guard (def p double 0)(if (> nd MB)(begin(= p 1))(begin(= p 0)))p)
 			                (:put
@@ -954,8 +1039,8 @@
 			                  (= this.nclst nclst)
                         (= this.ndim ndim))
 			                (:get
-			                  (= (aref (fref (aref privateCTlist st-clt) offsets) 1) this.r)
-                        (= (fref (aref privateCTlist st-clt) right_son_node) this.rank)
+			                  (= (aref (fref (mref tempcluster) offsets) 1) this.r)
+                        (= (fref (mref tempcluster) right_son_node) this.rank)
                       )
                     )
                   )
@@ -966,8 +1051,8 @@
 			                (if (and (> nd1 PN) (> nd2 PN))
 			                  (begin
 				                  (do-two
-				                    (= (aref (fref (aref privateCTlist st-clt) offsets) 0) (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
-				                    (= (aref (fref (aref privateCTlist st-clt) offsets) 1) (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
+				                    (= (aref (fref (mref tempcluster) offsets) 0) (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
+				                    (= (aref (fref (mref tempcluster) offsets) 1) (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
 				                    (handles build-cluster
                               ;;(:guard (def p double 0)(if (> nd MB)(begin(= p 1))(begin(= p 0)))p)
 				                      (:put
@@ -983,8 +1068,8 @@
                                 (= this.ndim ndim)
 				                      )
 				                      (:get
-				                        (= (aref (fref (aref privateCTlist st-clt) offsets) 1) this.r)
-                                (= (fref (aref privateCTlist st-clt) right_son_node) this.rank)
+				                        (= (aref (fref (mref tempcluster) offsets) 1) this.r)
+                                (= (fref (mref tempcluster) right_son_node) this.rank)
                               )
                             )
                           )
@@ -998,8 +1083,8 @@
 				                        (= (aref (aref zgmid i) 2) (aref (aref tempzgmid i) 2))
 				                      )
 				                      (do-two
-					                      (= (aref (fref (aref privateCTlist st-clt) offsets) 0) (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
-					                      (= (aref (fref (aref privateCTlist st-clt) offsets) 1) (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
+					                      (= (aref (fref (mref tempcluster) offsets) 0) (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
+					                      (= (aref (fref (mref tempcluster) offsets) 1) (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
 				                        (handles build-cluster
                                   ;;(:guard (def p double 0)(if (> nd MB)(begin(= p 1))(begin(= p 0)))p)
 					                        (:put
@@ -1014,8 +1099,8 @@
 					                          (= this.nclst nclst)
                                     (= this.ndim ndim))
 					                        (:get
-					                          (= (aref (fref (aref privateCTlist st-clt) offsets) 1) this.r)
-                                    (= (fref (aref privateCTlist st-clt) right_son_node) this.rank)
+					                          (= (aref (fref (mref tempcluster) offsets) 1) this.r)
+                                    (= (fref (mref tempcluster) right_son_node) this.rank)
                                   )
                                 )
                               )
@@ -1029,8 +1114,8 @@
 					                          (= (aref (aref zgmid i) 2) (aref (aref tempzgmid i) 2))
 					                        )
 					                        (do-two
-					                          (= (aref (fref (aref privateCTlist st-clt) offsets) 0) (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
-					                          (= (aref (fref (aref privateCTlist st-clt) offsets) 1) (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
+					                          (= (aref (fref (mref tempcluster) offsets) 0) (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
+					                          (= (aref (fref (mref tempcluster) offsets) 1) (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
 					                          (handles build-cluster
                                       ;;(:guard (def p double 0)(if (> nd MB)(begin(= p 1))(begin(= p 0)))p)
 					                            (:put
@@ -1045,8 +1130,8 @@
 					                              (= this.nclst nclst)
                                         (= this.ndim ndim))
 					                            (:get
-					                              (= (aref (fref (aref privateCTlist st-clt) offsets) 1) this.r)
-                                        (= (fref (aref privateCTlist st-clt) right_son_node) this.rank)
+					                              (= (aref (fref (mref tempcluster) offsets) 1) this.r)
+                                        (= (fref (mref tempcluster) right_son_node) this.rank)
                                       )
                                     )
                                   )
@@ -1060,8 +1145,8 @@
 					                              (= (aref (aref zgmid i) 2) (aref (aref tempzgmid i) 2))
 					                            )
 					                            (do-two
-						                            (= (aref (fref (aref privateCTlist st-clt) offsets) 0) (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
-						                            (= (aref (fref (aref privateCTlist st-clt) offsets) 1) (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
+						                            (= (aref (fref (mref tempcluster) offsets) 0) (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
+						                            (= (aref (fref (mref tempcluster) offsets) 1) (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
 					                              (handles build-cluster
                                           ;;(:guard (def p double 0)(if (> nd MB)(begin(= p 1))(begin(= p 0)))p)
 						                              (:put
@@ -1076,8 +1161,8 @@
 						                                (= this.nclst nclst)
                                             (= this.ndim ndim))
 						                              (:get
-						                                (= (aref (fref (aref privateCTlist st-clt) offsets) 1) this.r)
-                                            (= (fref (aref privateCTlist st-clt) right_son_node) this.rank)
+						                                (= (aref (fref (mref tempcluster) offsets) 1) this.r)
+                                            (= (fref (mref tempcluster) right_son_node) this.rank)
                                           )
                                         )
                                       )
@@ -1092,8 +1177,8 @@
 			              )
 		                (begin ;is even and exchange place
 			                (do-two
-			                  (= (aref (fref (aref privateCTlist st-clt) offsets) 0) (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
-			                  (= (aref (fref (aref privateCTlist st-clt) offsets) 1) (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
+			                  (= (aref (fref (mref tempcluster) offsets) 0) (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
+			                  (= (aref (fref (mref tempcluster) offsets) 1) (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
 			                  (handles build-cluster
                           ;;(:guard (def p double 0)(if (> nd MB)(begin(= p 1))(begin(= p 0)))p)
 			                    (:put
@@ -1108,8 +1193,8 @@
 			                      (= this.nclst nclst)
                             (= this.ndim ndim))
 			                    (:get
-			                      (= (aref (fref (aref privateCTlist st-clt) offsets) 1) this.r)
-                            (= (fref (aref privateCTlist st-clt) right_son_node) this.rank)
+			                      (= (aref (fref (mref tempcluster) offsets) 1) this.r)
+                            (= (fref (mref tempcluster) right_son_node) this.rank)
                           )
                         )
                       )
@@ -1121,16 +1206,16 @@
 	          (begin ;no parallel here
 	            (if (<= nd PN)
 		            (begin
-		              (= (aref (fref (aref privateCTlist st-clt) offsets) 0) (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
-		              (= (aref (fref (aref privateCTlist st-clt) offsets) 1) (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
+		              (= (aref (fref (mref tempcluster) offsets) 0) (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
+		              (= (aref (fref (mref tempcluster) offsets) 1) (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
 		            )
 		            (begin
 		              (if (bit-and ndpth 1)
 		                (begin ;look into next level
 			                (if (and (> nd1 PN) (> nd2 PN))
 			                  (begin
-			                    (= (aref (fref (aref privateCTlist st-clt) offsets) 0) (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
-			                    (= (aref (fref (aref privateCTlist st-clt) offsets) 1) (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
+			                    (= (aref (fref (mref tempcluster) offsets) 0) (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
+			                    (= (aref (fref (mref tempcluster) offsets) 1) (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
 			                  )
 			                  (begin
 			                    (if (and (<= nd1 PN) (<= nd2 PN))
@@ -1140,8 +1225,8 @@
 				                        (= (aref (aref zgmid i) 1) (aref (aref tempzgmid i) 1))
 				                        (= (aref (aref zgmid i) 2) (aref (aref tempzgmid i) 2))
 				                      )
-				                      (= (aref (fref (aref privateCTlist st-clt) offsets) 0) (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
-				                      (= (aref (fref (aref privateCTlist st-clt) offsets) 1) (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
+				                      (= (aref (fref (mref tempcluster) offsets) 0) (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
+				                      (= (aref (fref (mref tempcluster) offsets) 1) (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
 				                    )
 			                      (begin
 				                      (if (and (<= nd1 PN) (> nd2 PN))
@@ -1151,8 +1236,8 @@
 					                          (= (aref (aref zgmid i) 1) (aref (aref tempzgmid i) 1))
 					                          (= (aref (aref zgmid i) 2) (aref (aref tempzgmid i) 2))
 					                        )
-				                          (= (aref (fref (aref privateCTlist st-clt) offsets) 0) (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
-				                          (= (aref (fref (aref privateCTlist st-clt) offsets) 1) (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
+				                          (= (aref (fref (mref tempcluster) offsets) 0) (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
+				                          (= (aref (fref (mref tempcluster) offsets) 1) (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
 				                        )
 				                        (begin
 				                          (if (and (> nd1 PN) (<= nd2 PN))
@@ -1162,8 +1247,8 @@
 					                              (= (aref (aref zgmid i) 1) (aref (aref tempzgmid i) 1))
 					                              (= (aref (aref zgmid i) 2) (aref (aref tempzgmid i) 2))
 					                            )
-					                            (= (aref (fref (aref privateCTlist st-clt) offsets) 0) (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
-					                            (= (aref (fref (aref privateCTlist st-clt) offsets) 1) (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
+					                            (= (aref (fref (mref tempcluster) offsets) 0) (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
+					                            (= (aref (fref (mref tempcluster) offsets) 1) (create-ctree-ssgeom (ptr (aref zgmid nl)) (ptr (aref tempzgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
 					                          )
 				                          )
 				                        )
@@ -1174,8 +1259,8 @@
                       )
 			              )
 		                (begin ;is even and exchange place
-		                  (= (aref (fref (aref privateCTlist st-clt) offsets) 0) (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
-		                  (= (aref (fref (aref privateCTlist st-clt) offsets) 1) (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
+		                  (= (aref (fref (mref tempcluster) offsets) 0) (create-ctree-ssgeom tempzgmid zgmid ndpth ndscd nsrt1 nd1 md nclst ndim))
+		                  (= (aref (fref (mref tempcluster) offsets) 1) (create-ctree-ssgeom (ptr (aref tempzgmid nl)) (ptr (aref zgmid nl)) ndpth ndscd nsrt2 nd2 md nclst ndim))
 		                )
                   )
 		            )
@@ -1186,7 +1271,95 @@
 	    )
     )
   )
-  (= (fref (aref privateCTlist st-clt) ndscd) nd)
+  (def tempcluster (ptr cluster))
+  (= tempcluster (ptr (aref privateCTlist st-clt)))
+  (= (fref (mref tempcluster) ndscd) nd)
+  ;;bounding box
+  (= (fref (mref tempcluster) bmin) (cast (ptr double) (csym::malloc (* 3 (sizeof double)))))
+  (= (fref (mref tempcluster) bmax) (cast (ptr double) (csym::malloc (* 3 (sizeof double)))))
+  (def zeps double 1.0e-5)
+  (if (> (fref (mref tempcluster) nnson) 0)
+    (begin
+      (for ((= id 0) (< id ndim) (inc id))
+        (= (aref (fref (mref tempcluster) bmin) id) 
+           (aref (fref (aref privateCTlist (aref (fref (mref tempcluster) offsets) 0)) bmin) id)
+        )
+        (= (aref (fref (mref tempcluster) bmax) id) 
+           (aref (fref (aref privateCTlist (aref (fref (mref tempcluster) offsets) 0)) bmax) id)
+        )
+      )
+      (for ((= il 1) (< il (fref (mref tempcluster) nnson)) (inc il))
+        (for ((= id 0) (< id ndim) (inc id))
+          (if (< (aref (fref (aref privateCTlist (aref (fref (mref tempcluster) offsets) il)) bmin) id) (aref (fref (mref tempcluster) bmin) id))
+            (begin
+              (= (aref (fref (mref tempcluster) bmin) id) (aref (fref (aref privateCTlist (aref (fref (mref tempcluster) offsets) il)) bmax) id))
+            )
+          )
+          (if (< (aref (fref (mref tempcluster) bmax) id) (aref (fref (aref privateCTlist (aref (fref (mref tempcluster) offsets) il)) bmax) id))
+            (begin
+              (= (aref (fref (mref tempcluster) bmax) id) (aref (fref (aref privateCTlist (aref (fref (mref tempcluster) offsets) il)) bmax) id))
+            )
+          )
+        )
+      )
+    )
+    (begin
+      (for ((= id 0) (< id ndim) (inc id))
+        (= (aref (fref (mref tempcluster) bmin) id) (aref (aref zgmid 0) id))
+        (= (aref (fref (mref tempcluster) bmax) id) (aref (aref zgmid 0) id))
+      )
+      (for ((= id 0) (< id ndim) (inc id))
+        (for ((= il 1) (< il (fref (mref tempcluster) nsize)) (inc il))
+          (if (< (aref (aref zgmid il) id) (aref (fref (mref tempcluster) bmin) id))
+            (begin
+              (= (aref (fref (mref tempcluster) bmin) id) (aref (aref zgmid il) id))
+            )
+          )
+          (if (< (aref (fref (mref tempcluster) bmax) id) (aref (aref zgmid il) id))
+            (begin
+              (= (aref (fref (mref tempcluster) bmax) id) (aref (aref zgmid il) id))
+            )
+          )
+        )
+      )
+    )
+  )
+  (def zwdth double (* 
+                      (- 
+                        (aref (fref (mref tempcluster) bmax) 0) 
+                        (aref (fref (mref tempcluster) bmin) 0)) 
+                      (- (aref (fref (mref tempcluster) bmax) 0)
+                        (aref (fref (mref tempcluster) bmin) 0))))
+  (for ((= id 1) (< id ndim) (inc id))
+    (= zwdth
+       (+ zwdth
+          (* (- (aref (fref (mref tempcluster) bmax) id)
+                (aref (fref (mref tempcluster) bmin) id))
+             (- (aref (fref (mref tempcluster) bmax) id)
+                (aref (fref (mref tempcluster) bmin) id)))))
+  )
+  (= zwdth (csym::sqrt zwdth))
+  (for ((= id 0) (< id ndim) (inc id))
+    (def bdiff double
+      (- (aref (fref (mref tempcluster) bmax) id) (aref (fref (mref tempcluster) bmin) id)))
+    (if (< bdiff (* zeps zwdth))
+        (begin
+          (= (aref (fref (mref tempcluster) bmax) id)
+             (+ (aref (fref (mref tempcluster) bmax) id)
+                (* 0.5 (- (* zeps zwdth) bdiff))))
+          (= (aref (fref (mref tempcluster) bmin) id)
+             (- (aref (fref (mref tempcluster) bmin) id)
+                (* 0.5 (- (* zeps zwdth) bdiff)))))))
+  (= zwdth
+     (* (- (aref (fref (mref tempcluster) bmax) 0) (aref (fref (mref tempcluster) bmin) 0))
+        (- (aref (fref (mref tempcluster) bmax) 0) (aref (fref (mref tempcluster) bmin) 0))))
+  (for ((= id 1) (< id ndim) (inc id))
+    (= zwdth
+       (* (- (aref (fref (mref tempcluster) bmax) id) (aref (fref (mref tempcluster) bmin) id))
+          (- (aref (fref (mref tempcluster) bmax) id)
+             (aref (fref (mref tempcluster) bmin) id)))))
+  (= (fref (mref tempcluster) zwdth) (csym::sqrt zwdth))
+  ;;end of bounding box
   (return st-clt)
 )
 
@@ -1287,9 +1460,9 @@
       (= this.nsrt nsrt)
       )
       (:get)
-      )
     )
   )
+)
 
 (def (setStart i1 i2 ncut gn nd zlmid lessNum moreNum lessStart moreStart zgmid tempzgmid ndpth nsrt)
   (wfn void int int int int int double (ptr int) (ptr int) (ptr int) (ptr int) (ptr (array double 3)) (ptr (array double 3)) int int)
@@ -1330,25 +1503,25 @@
 	  (inc ms))))
     (handles setStart
       (:put from j1 to j2
-	    (= this.i1 j1)
-	    (= this.i2 j2)
-	    (= this.ncut ncut)
-	    (= this.gn gn)
-	    (= this.nd nd)
-      (= this.nsrt nsrt)
-	    (= this.zgmid zgmid)
-	    (= this.zlmid zlmid)
-	    (= this.tempzgmid tempzgmid)
-	    (= this.lessNum lessNum)
-	    (= this.moreNum moreNum)
-	    (= this.lessStart lessStart)
-	    (= this.moreStart moreStart)
-      (= this.ndpth ndpth)
-	)
+	      (= this.i1 j1)
+	      (= this.i2 j2)
+	      (= this.ncut ncut)
+	      (= this.gn gn)
+	      (= this.nd nd)
+        (= this.nsrt nsrt)
+	      (= this.zgmid zgmid)
+	      (= this.zlmid zlmid)
+	      (= this.tempzgmid tempzgmid)
+	      (= this.lessNum lessNum)
+	      (= this.moreNum moreNum)
+	      (= this.lessStart lessStart)
+	      (= this.moreStart moreStart)
+        (= this.ndpth ndpth)
+	    )
       (:get)
-	)
-    )
+	  )
   )
+)
 
 (def (ssum i1 i2 ndpth lessNum) (wfn int int int int (ptr int))
   (csym::fprintf stderr "ssum: %f %d %d %d %d~%" (csym::get-wall-time) WORKER-ID i1 i2 ndpth)
@@ -1360,16 +1533,16 @@
     (+= sum (aref lessNum id))
     (handles ssum
       (:put from j1 to j2
-	(= this.i1 j1)
-	(= this.i2 j2)
-	(= this.lessNum lessNum)
-  (= this.ndpth ndpth)
-	)
+	      (= this.i1 j1)
+	      (= this.i2 j2)
+	      (= this.lessNum lessNum)
+        (= this.ndpth ndpth)
+	    )
       (:get
-	(+= sum this.sum)
-	)
-      )
+	      (+= sum this.sum)
+	    )
     )
+  )
   (return sum)
 )
 
@@ -1397,4 +1570,46 @@
   )
   ;;(= pos (ptr (aref privateCTlist val)))
   (return val)
+)
+
+(def (csym::my-allgather para_ptr) (fn (ptr void) (ptr void))
+  (def comm_size int)
+  (def my_rank int)
+  (csym::MPI_Comm_size MPI_COMM_WORLD (ptr comm_size))
+  (csym::MPI_Comm_rank MPI_COMM_WORLD (ptr my_rank))
+  (csym::MPI_Barrier MPI_COMM_WORLD)
+  (csym::MPI_Allgather (ptr countPCT) 1 MPI_INT length_list comm_size MPI_INT MPI_COMM_WORLD)
+  (def il int)
+  (= pre (cast (ptr int) (csym::malloc (* (sizeof int) comm_size))))
+  (= (aref pre 0) 0)
+  (for ((= il 0) (< il comm_size) (inc il))
+    (= (aref pre (+ il 1)) (+ (aref pre il) (aref length_list il)))
+  )
+  (= total_length (+ (aref pre (- comm_size 1)) (aref length_list (- comm_size 1))))
+  ;;(csym::fprintf stderr "rankid %d: total_length is %d!~%" my_rank total_length)
+  
+  (def countR int)
+  (= countR (atomic_load (ptr countPCT)))
+  ;;(csym::fprintf stderr "rankid %d: countR is %d!~%" my_rank countR)
+  (for ((= il 0) (< il countR) (inc il))
+    (if (== (fref (aref privateCTlist il) left_son_node) -1)
+      (begin
+        (= (aref (fref (aref privateCTlist il) offsets) 0) (+ (aref (fref (aref privateCTlist il) offsets) 0) (aref pre my_rank)))
+      )
+      (begin
+        (= (aref (fref (aref privateCTlist il) offsets) 0) (+ (aref (fref (aref privateCTlist il) offsets) 0) (aref pre (fref (aref privateCTlist il) left_son_node))))
+      )
+    )
+    (if (== (fref (aref privateCTlist il) right_son_node) -1)
+      (begin
+        (= (aref (fref (aref privateCTlist il) offsets) 1) (+ (aref (fref (aref privateCTlist il) offsets) 1) (aref pre my_rank)))
+      )
+      (begin
+        ;;(csym::fprintf stderr "rank%d: inter-node offset happened right at il:%d~%" my_rank il)
+        (= (aref (fref (aref privateCTlist il) offsets) 1) (+ (aref (fref (aref privateCTlist il) offsets) 1) (aref pre (fref (aref privateCTlist il) right_son_node))))
+      )
+    )
+  )
+  ;;(csym::MPI_Allgatherv privateCTlist countR )
+  (csym::MPI_Barrier MPI_COMM_WORLD)
 )
