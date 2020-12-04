@@ -7,6 +7,7 @@
 (c-exp "#include <math.h>")
 (c-exp "#include <time.h>")
 (c-exp "#include <sys/time.h>")
+(c-exp "#include <unistd.h>")
 (c-exp "#include \"../data/bem_file.h\"")
 (%defconstant PN 10000)             ;;TS
 (%defconstant PL 10)                ;;TN
@@ -322,6 +323,14 @@
   (= spent (- end start))
   (csym::fprintf stderr "cluster tree time spent:%.10lf~%" spent)
   ;;(csym::set-bndbox-cog st-clt gmid nofc)
+
+  (decl f (ptr FILE))
+  (= f (csym::fopen "hmat_all.txt" "w"))
+  ;;(csym::sleep 10)
+  (checkClusterTree f st-clt)
+  ;;(csym::sleep 10)
+  (csym::fclose f)
+
   (= ndpth 0)
   (= start (csym::get-wall-time))
   (csym::count-lntmx st-clt st-clt param lnmtx nffc)
@@ -370,7 +379,7 @@
       (+= nlf-sum nlf-i))
     (csym::fprintf stderr "nlf-sum = %d~%" nlf-sum))
   
-  (csym::fprintf stderr "nlf:%ld~%" nncon)
+  ;;(csym::fprintf stderr "nlf:%ld~%" nncon)
   (csym::fprintf stderr "block cluster tree time spent:%.10lf~%" spent)
   (csym::fprintf stderr "depth_max:%ld  count_node:%ld~%" depth-max count-node))
 
@@ -685,20 +694,19 @@
 )
 
 (def (csym::checkClusterTree f st-clt) (fn void (ptr FILE) (ptr cluster))
-  (if (< (fref (mref st-clt) ndpth) 11)
-      (begin
-        (csym::fprintf f "%d %d %d %d %lf~%"
-                       (fref (mref st-clt) nstrt)
-                       (fref (mref st-clt) nsize)
-                       (fref (mref st-clt) ndpth)
-                       (fref (mref st-clt) nnson)
-                       (fref (mref st-clt) zwdth))))
-  (if (== (fref (mref st-clt) nnson) 0)
-      (begin (return))
-      (if (== (fref (mref st-clt) nnson) 1)
-          (begin (csym::checkClusterTree f (aref (fref (mref st-clt) pc-sons) 0)))
-          (begin (csym::checkClusterTree f (aref (fref (mref st-clt) pc-sons) 0))
-                 (csym::checkClusterTree f (aref (fref (mref st-clt) pc-sons) 1))))))
+  (def width double (fref (mref st-clt) zwdth))
+  ;;(csym::fprintf f "%lf~%" width)
+  (if (== (fref (mref st-clt) nnson) 2)
+    (begin 
+      (csym::fprintf f "%lf~%" width)
+      (csym::checkClusterTree f (aref (fref (mref st-clt) pc-sons) 0))
+      (csym::checkClusterTree f (aref (fref (mref st-clt) pc-sons) 1))
+    )
+    (begin
+      ;;(csym::fprintf f "%lf~%" width)
+    )
+  )
+)
 
 (def (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt nd md nclst)
     (wfn (ptr cluster) (ptr (array double 3)) (ptr (array double 3))
@@ -755,12 +763,6 @@
 	    (def moreNum (ptr int))
 	    (def lessStart (ptr int))
 	    (def moreStart (ptr int))
-      ;;(def asize size_t)
-      ;;(= asize (if-exp (> nd TH) 1 nd))
-      ;;(def lessN (array int asize))
-      ;;(def moreN (array int asize))
-      ;;(def lessS (array int asize))
-      ;;(def moreS (array int asize))
 	    (= lessNum (cast (ptr int) (csym::malloc (* gn (sizeof int)))))
 	    (= moreNum (cast (ptr int) (csym::malloc (* gn (sizeof int)))))
 	    (= lessStart (cast (ptr int) (csym::malloc (* gn (sizeof int)))))
@@ -1083,7 +1085,7 @@
         (for ((= id 0) (< id ndim) (inc id))
           (if (< (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmin) id) (aref (fref (mref st-clt) bmin) id))
             (begin
-              (= (aref (fref (mref st-clt) bmin) id) (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmax) id))
+              (= (aref (fref (mref st-clt) bmin) id) (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmin) id))
             )
           )
           (if (< (aref (fref (mref st-clt) bmax) id) (aref (fref (mref (aref (fref (mref st-clt) pc-sons) il)) bmax) id))

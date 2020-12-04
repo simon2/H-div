@@ -450,7 +450,7 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
     for(il=1;il<st_clt->nnson;il++){
       for(id=0;id<ndim;id++){
 	if(st_clt->pc_sons[il]->bmin[id] < st_clt->bmin[id]){
-	  st_clt->bmin[id] = st_clt->pc_sons[il]->bmax[id];
+	  st_clt->bmin[id] = st_clt->pc_sons[il]->bmin[id];
 	}
 	if(st_clt->bmax[id] < st_clt->pc_sons[il]->bmax[id]){
 	  st_clt->bmax[id] = st_clt->pc_sons[il]->bmax[id];

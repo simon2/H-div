@@ -393,7 +393,7 @@ void cal_bndbox_cog(cluster *st_clt,double (*zgmid)[3],int *lod,int nofc){
     for(il=1;il<st_clt->nnson;il++){
       for(id=0;id<ndim;id++){
 	      if(st_clt->pc_sons[il]->bmin[id] < st_clt->bmin[id]){
-	        st_clt->bmin[id] = st_clt->pc_sons[il]->bmax[id];
+	        st_clt->bmin[id] = st_clt->pc_sons[il]->bmin[id];
 	      }
 	      if(st_clt->bmax[id] < st_clt->pc_sons[il]->bmax[id]){
 	        st_clt->bmax[id] = st_clt->pc_sons[il]->bmax[id];

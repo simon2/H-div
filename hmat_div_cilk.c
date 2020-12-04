@@ -65,6 +65,7 @@ cluster * create_cluster(int nmbr,int ndpth,int nstrt,int nsize,int ndim,int nso
 void free_st_clt(cluster *st_clt);
 cluster * create_ctree_ssgeom(double (*zgmid)[3],double (*tempzgmid)[3],double param[],
                               int ndpth,int ndscd,int nsrt,int nd,int md,int ndim,int nclst);
+void checkCT(FILE *f, cluster *st_clt);
 double get_wall_time();
 double get_cpu_time();
 
@@ -170,6 +171,11 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   end = get_wall_time();
   spent = end - start;
   printf("cluster tree time spent:%.10f\n",spent);
+
+  FILE *f;
+  f = fopen("hmat_cilk.txt","w");
+  checkCT(f,st_clt);
+  fclose(f);
 
   ndpth = 0;
   free(tempgmid);
@@ -746,7 +752,7 @@ cluster * create_ctree_ssgeom(double (*zgmid)[3],     //coordination of objects
     for(il=1;il<st_clt->nnson;il++){
       for(id=0;id<ndim;id++){
 	if(st_clt->pc_sons[il]->bmin[id] < st_clt->bmin[id]){
-	  st_clt->bmin[id] = st_clt->pc_sons[il]->bmax[id];
+	  st_clt->bmin[id] = st_clt->pc_sons[il]->bmin[id];
 	}
 	if(st_clt->bmax[id] < st_clt->pc_sons[il]->bmax[id]){
 	  st_clt->bmax[id] = st_clt->pc_sons[il]->bmax[id];
@@ -800,4 +806,12 @@ double get_wall_time(){
 
 double get_cpu_time(){
   return (double)clock() / CLOCKS_PER_SEC;
+}
+
+void checkCT(FILE *f, cluster *st_clt){
+  fprintf(f,"%lf\n",st_clt->zwdth);
+  if(st_clt->nnson == 2){
+    checkCT(f,st_clt->pc_sons[0]);
+    checkCT(f,st_clt->pc_sons[1]);
+  }
 }
