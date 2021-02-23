@@ -88,21 +88,21 @@
 
 (def worker-init
   (= (aref Wdata-list WORKER-ID) (ptr WDATA))
-  (= WDATA.n 200000000)
+  (= WDATA.n 1599448480)
   ;; Do malloc() after CT construction
-  ;;(= WDATA.leafnode-list (cast (ptr leafmtx) (csym::malloc (* WDATA.n (sizeof leafmtx)))))
+  (= WDATA.leafnode-list (cast (ptr leafmtx) (csym::malloc (* WDATA.n (sizeof leafmtx)))))
   (= (aref WDATA.lnmtx 0) 0)
   (= (aref WDATA.lnmtx 1) 0)
   (= (aref WDATA.lnmtx 2) 0)
   (= WDATA.nlf 0)
 )
 
-#|(def (task create-leafmtx)
-  (def st-cltl (ptr cluster) :in)
-  (def st-cltt (ptr cluster) :in)
+(def (task create_leafmtx)
+  (def st-cltl int :in)
+  (def st-cltt int :in)
   (def i1 int :in)
   (def i2 int :in)
-)|#
+)
 
 (def (task start-up)
   (def r int)
@@ -126,7 +126,6 @@
 
 (def (task-sender build-cluster)
   (if (> 0 this.nd) (return))
-
   (csym::send-doubles (cast (ptr double) this.zgmid) (* this.nd 3))
   (csym::send-doubles (cast (ptr double) this.tempzgmid) (* this.nd 3))
 )
@@ -163,6 +162,30 @@
   )
 )
 
+#|(def (task-sender create_leafmtx)
+  (csym::send_int nlf)
+)
+
+(def (task-receiver create_leafmtx)
+  (= nlf (csym::recv_int))
+  (if (== flagBCT 0)
+    (begin
+      (def i int)
+      (def nlf-for-each-worker int (* (/ (cast long nlf) num-thrs) 10))
+      (csym::fprintf stderr "rank 1 nlf-for-each-worker: %ld num-thrs: %ld ~%" nlf-for-each-worker num-thrs)
+      ;;(def sz size-t (* nlf-for-each-worker (cast long num-thrs)))
+      (for ((= i 0) (< i num-thrs) (inc i))
+        (= (fref (aref Wdata-list i) -> leafnode-list)
+           (cast (ptr leafmtx) (csym::malloc (* (sizeof leafmtx) nlf-for-each-worker))))
+        (if (not (fref (aref Wdata-list i) -> leafnode-list))
+          (begin
+            (csym::fprintf stderr "rank 1 malloc temp-leafmtx for worker %d error!~%" i)
+            (csym::exit 99))))
+      (= flagBCT 1)
+    )
+  )
+)|#
+
 (def (rslt-sender build-cluster)
   (csym::send-doubles (cast (ptr double) (fref (aref privateCTlist this.r) bmax)) 3)
   (csym::send-doubles (cast (ptr double) (fref (aref privateCTlist this.r) bmin)) 3)
@@ -171,7 +194,28 @@
 (def (rslt-receiver build-cluster)
   (csym::recv-doubles (cast (ptr double) this.bmax) 3)
   (csym::recv-doubles (cast (ptr double) this.bmin) 3)
-  (csym::fprintf stderr "this.bmax: %lf %lf %lf~%" (aref this.bmax 0) (aref this.bmax 1) (aref this.bmax 2))
+)
+
+(def (rslt-sender create_leafmtx)
+  (def my_rank int)
+  (csym::MPI_Comm_rank MPI_COMM_WORLD (ptr my_rank))
+  (begin
+    (def nlf-sum int 0)
+    (def i int)
+    (for ((= i 0) (< i num-thrs) (inc i))
+      (def nlf-i int (fref (aref Wdata-list i) -> nlf))
+      ;;(csym::fprintf stderr "nlf(%d) = %d~%" i nlf-i)
+      ;;(if (> nlf-i nlf-for-each-worker)
+      ;;    (begin
+      ;;      (csym::fprintf stderr "nlf of counted by worker %d is larger than nlf-for-each-worker!~%" i)
+      ;;      (csym::exit 99)))
+       (+= nlf-sum nlf-i))
+    (csym::fprintf stderr "rankid %d nlf-sum = %d~%" my_rank nlf-sum))
+  ;;(csym::fprintf stderr "rankid %d thread 0; nlf %d!~%" my_rank (fref (aref Wdata-list 0) -> nlf))
+)
+
+(def (rslt-receiver create_leafmtx)
+
 )
 
 (def (task minmax)
@@ -233,8 +277,8 @@
     (wfn void (ptr leafmtxp) (ptr (array double 3)) (array double) (ptr int) (ptr int) int int int))
 (decl (csym::med3 nl nr nlr2)
     (fn int int int int))
-;;(decl (create-leafmtx stc-cltl st-cltt i1 i2)
-;;    (wfn void (ptr cluster) (ptr cluster) int int))
+(decl (create_leafmtx stc-cltl st-cltt i1 i2)
+    (wfn void int int int int))
 (decl (csym::dist-2cluster st-cltl st-cltt)
     (fn double int int))
 (decl (csym::count-lntmx st-cltl st-cltt lnmtx nffc)
@@ -274,12 +318,15 @@
 (def pre (ptr int))
 (def pre_BYTE (ptr int))
 (def total_length int)
+(def flagBCT int 0)
+(def nlf int)
 
 (def zgmid (ptr (array double 3)))
 (def tempzgmid (ptr (array double 3)))
 
-;;(def (task-body create-leafmtx)
-;;  (create_leafmtx this.st-cltl this.st-cltt this.i1 this.i2))
+(def (task-body create_leafmtx)
+  (create_leafmtx this.st-cltl this.st-cltt this.i1 this.i2)
+)
 
 (def (task-body start-up)
   (= this.r (start-up))
@@ -417,6 +464,11 @@
 
   (= start (csym::get-wall-time))
   (= st-clt (create-ctree-ssgeom zgmid tempzgmid ndpth ndscd nsrt ndf nofc nclst ndim))
+
+  ;;(def testmalloc (ptr int))
+  ;;(= testmalloc (csym::malloc (sizeof leafmtx)))
+  ;;(csym::fprintf stderr "malloc-2 success~%")
+
   ;;(csym::fprintf stderr "node0: countCT=%d~%" (atomic_load (ptr countPCT)))
   ;;================ MPI code ======================
   (def comm_size int)
@@ -428,6 +480,11 @@
   (= countR (atomic_load (ptr countPCT)))
   (csym::fprintf stderr "rankid %d: countR is %d!~%" my_rank countR)
   (csym::MPI_Allgather (ptr countR) 1 MPI_INT length_list comm_size MPI_INT MPI_COMM_WORLD)
+  
+  (def testmalloc (ptr int))
+  (= testmalloc (csym::malloc (sizeof leafmtx)))
+  (csym::fprintf stderr "malloc-1 success~%")
+  
   ;;prefix-sum
   (= pre (cast (ptr int) (csym::malloc (* (sizeof int) comm_size))))
   (= pre_BYTE (cast (ptr int) (csym::malloc (* (sizeof int) comm_size))))
@@ -462,9 +519,20 @@
       )
     )
   )
+
+  ;;(def testmalloc (ptr int))
+  ;;(= testmalloc (csym::malloc (sizeof leafmtx)))
+  ;;(csym::fprintf stderr "malloc0 success~%")
+
   ;;MPI_Allgatherv begin
   (csym::MPI_Barrier MPI_COMM_WORLD)
+  (def bytelength size-t)
+  (= bytelength (- (cast (ptr char) (ptr (aref privateCTlist countR))) (cast (ptr char) (ptr (aref privateCTlist 0)))))
+  (csym::fprintf stderr "bytelength:%ld %ld~%" bytelength (* countR (sizeof cluster)))
   (csym::MPI_Allgatherv (ptr (aref privateCTlist 0)) (* countR (sizeof cluster)) MPI_BYTE (ptr (aref resultCTlist 0)) length_list_BYTE pre_BYTE MPI_BYTE MPI_COMM_WORLD)
+  (free privateCTlist)
+  (free length_list)
+  (free length_list_BYTE)
 
   ;;================ End MPI code ==================
   (= end (csym::get-wall-time))
@@ -472,13 +540,17 @@
   ;;(csym::sleep 10)
   
   (csym::fprintf stderr "cluster tree time spent:%.10lf~%" spent)
-  (decl f (ptr FILE))
-  (= f (csym::fopen "hmat_dist.txt" "w"))
+  ;;(decl f (ptr FILE))
+  ;;(= f (csym::fopen "hmat_dist.txt" "w"))
   (csym::fprintf stderr "checkCT:%ld~%" (csym::checkCT st-clt))
-  (csym::fprintf stderr "st-clt:%ld~%" st-clt)
-  (checkClusterTree f st-clt)
-  (csym::fclose f)
+  ;;(csym::fprintf stderr "st-clt:%ld~%" st-clt)
+  ;;(checkClusterTree f st-clt)
+  ;;(csym::fclose f)
 
+  ;;(def testmalloc (ptr int))
+  ;;(= testmalloc (csym::malloc (sizeof leafmtx)))
+  ;;(csym::fprintf stderr "malloc1 success~%")
+  
   (= ndpth 0)
   (csym::fprintf stderr "st-clt:%ld~%" st-clt)
   (= start (csym::get-wall-time))
@@ -486,36 +558,56 @@
   (= end (csym::get-wall-time))
   (= spent (- end start))
   (csym::fprintf stderr "count time:%.10lf~%" spent)
-  (= (fref (mref st-leafmtxp) nlfkt) (aref lnmtx 0))
-  (def nlf int (+ (aref lnmtx 0) (aref lnmtx 1)))
-  (= st-leafmtx (cast (ptr leafmtx) (csym::malloc (* nlf (sizeof leafmtx)))))
-  (= (fref (mref st-leafmtxp) nlf) nlf)
+
+  ;;(def testmalloc2 (ptr int))
+  ;;(= testmalloc2 (csym::malloc (sizeof leafmtx)))
+  ;;(csym::fprintf stderr "malloc2 success~%")
+
+  ;;(= (fref (mref st-leafmtxp) nlfkt) (aref lnmtx 0))
+  (= nlf (+ (aref lnmtx 0) (aref lnmtx 1)))
+  ;;(= st-leafmtx (cast (ptr leafmtx) (csym::malloc (* nlf (sizeof leafmtx)))))
+  ;;(= (fref (mref st-leafmtxp) nlf) nlf)
   (csym::fprintf stderr "nlf: %ld~%" nlf)
   
-  #|(def nlf-for-each-worker int (/ (* (cast long nlf) 100) num-thrs))
+  (def nlf-for-each-worker int (* (/ (cast long nlf) num-thrs) 10))
   (csym::fprintf stderr "nlf-for-each-worker: %ld num-thrs: %ld ~%" nlf-for-each-worker num-thrs)
-  (begin
-    (def sz size-t (* nlf-for-each-worker (cast long num-thrs)))
-    (for ((= i 0) (< i num-thrs) (inc i))
-      (= (fref (aref Wdata-list i) -> leafnode-list)
-         (cast (ptr leafmtx) (csym::malloc sz)))
-      (if (not (fref (aref Wdata-list i) -> leafnode-list))
+  #|(if (== flagBCT 0)
+    (begin
+      ;;(def sz size-t (* nlf-for-each-worker (cast long num-thrs)))
+      ;;(csym::fprintf stderr "sz: %ld~%" sz)
+      (for ((= i 0) (< i num-thrs) (inc i))
+        ;;(csym::fprintf stderr "test1 i %ld~%" i)
+        (= (fref (aref Wdata-list i) -> leafnode-list)
+           (cast (ptr leafmtx) (csym::malloc (* (sizeof leafmtx) nlf-for-each-worker))))
+        ;;(csym::fprintf stderr "test2 i %ld~%" i)
+        ;;(csym::sleep 5)
+        (if (not (fref (aref Wdata-list i) -> leafnode-list))
           (begin
             (csym::fprintf stderr "malloc temp-leafmtx for worker %d error!~%" i)
-            (csym::exit 99)))))
+            (csym::exit 99))))
+      (= flagBCT 1)
+    )
+  )|#
   (= nlf 0)
+
+  ;;(def testmalloc3 (ptr int))
+  ;;(= testmalloc3 (csym::malloc (sizeof leafmtx)))
+  ;;(csym::fprintf stderr "malloc3 success~%")
+  
   (decl all int)
-  (= all (* (fref (mref st-clt) nnson) (fref (mref st-clt) nnson)))
+  (csym::fprintf stderr "st-clt: %ld~%" st-clt)
+  (= all (* (fref (aref resultCTlist st-clt) nnson) (fref (aref resultCTlist st-clt) nnson)))
   (csym::fprintf stderr "all:%ld~%" all)
+  (csym::fprintf stderr "st-clt:%ld~%" st-clt)
   (= start (csym::get-wall-time))
-  (create-leafmtx st-clt st-clt 0 all)
+  (create_leafmtx st-clt st-clt 0 all)
   (= end (csym::get-wall-time))
   (= spent (- end start))
-
+  
   (def nncon int 0)
   (for ((= i 0) (< i 100) (inc i))
     (= nncon (+ (aref nff i) nncon)))
-  (csym::fprintf stderr "nlf:%ld~%" WDATA.nlf)
+  ;;(csym::fprintf stderr "nlf:%ld~%" WDATA.nlf)
   (begin
     (def nlf-sum int 0)
     (for ((= i 0) (< i num-thrs) (inc i))
@@ -529,7 +621,7 @@
     (csym::fprintf stderr "nlf-sum = %d~%" nlf-sum))
   
   (csym::fprintf stderr "nlf:%ld~%" nncon)
-  (csym::fprintf stderr "block cluster tree time spent:%.10lf~%" spent)|#
+  (csym::fprintf stderr "block cluster tree time spent:%.10lf~%" spent)
   ;;(csym::fprintf stderr "depth_max:%ld  count_node:%ld~%" depth-max count-node)
 )
 
@@ -634,24 +726,25 @@
                 (begin (= med3 nlr2))))))
   (return med3))
 
-#|(def (create-leafmtx st-cltl st-cltt i1 i2)
-    (wfn void (ptr cluster) (ptr cluster) int int)
-  (def ndl int (* (fref (mref st-cltl) nsize) nffc))
-  (def ndt int (* (fref (mref st-cltt) nsize) nffc))
-  (def nstrtl int (fref (mref st-cltl) nstrt))
-  (def nstrtt int (fref (mref st-cltt) nstrt))
-  (def nnsonl int (fref (mref st-cltl) nnson))
-  (def nnsont int (fref (mref st-cltt) nnson))
-  (def ndpth int (fref (mref st-cltt) ndpth))
+(def (create_leafmtx st-cltl st-cltt i1 i2)
+    (wfn void int int int int)
+  (def nffc int 1)
+  (def ndl int (* (fref (aref resultCTlist st-cltl) nsize) nffc))
+  (def ndt int (* (fref (aref resultCTlist st-cltt) nsize) nffc))
+  (def nstrtl int (fref (aref resultCTlist st-cltl) nstrt))
+  (def nstrtt int (fref (aref resultCTlist st-cltt) nstrt))
+  (def nnsonl int (fref (aref resultCTlist st-cltl) nnson))
+  (def nnsont int (fref (aref resultCTlist st-cltt) nnson))
+  (def ndpth int (fref (aref resultCTlist st-cltt) ndpth))
   (decl ia int)
-  (def nleaf double (aref param 41))
-  (def zeta double (aref param 51))
+  (def nleaf double 15.0)
+  (def zeta double 2.0)
   (def zdistlt double (csym::dist-2cluster st-cltl st-cltt))
-  (if (and (or (<= (* (fref (mref st-cltl) zwdth) zeta) zdistlt)
-               (<= (* (fref (mref st-cltt) zwdth) zeta) zdistlt))
+  ;;(csym::fprintf stderr "zdistlt:%lf~%" zdistlt)
+  (if (and (or (<= (* (fref (aref resultCTlist st-cltl) zwdth) zeta) zdistlt)
+               (<= (* (fref (aref resultCTlist st-cltt) zwdth) zeta) zdistlt))
            (and (>= ndl nleaf) (>= ndt nleaf)))
       (begin
-	;;(csym::fprintf stderr "type1 nlf:%ld~%" WDATA.nlf)
         (= (fref (aref WDATA.leafnode-list WDATA.nlf) nstrtl) nstrtl)
         (= (fref (aref WDATA.leafnode-list WDATA.nlf) ndl) ndl)
         (= (fref (aref WDATA.leafnode-list WDATA.nlf) nstrtt) nstrtt)
@@ -659,22 +752,17 @@
         (= (fref (aref WDATA.leafnode-list WDATA.nlf) kt) 0)
         (= (fref (aref WDATA.leafnode-list WDATA.nlf) ltmtx) 1)
         (= WDATA.nlf (+ WDATA.nlf 1))
-	;(csym::fprintf stderr "%ld end~%" WDATA.nlf)
-	;;(= (aref nff WORKER-ID) (+ (aref nff WORKER-ID) 1))
-	#+comment(csym::fprintf stderr "type1 end~%"))
+	)
       (begin
         (if (or (== nnsonl 0) (== nnsont 0) (<= ndl nleaf) (<= ndt nleaf))
             (begin
-	      ;(csym::fprintf stderr "type2 nlf:%ld~%" WDATA.nlf)
 	      (= (fref (aref WDATA.leafnode-list WDATA.nlf) nstrtl) nstrtl)
               (= (fref (aref WDATA.leafnode-list WDATA.nlf) ndl) ndl)
               (= (fref (aref WDATA.leafnode-list WDATA.nlf) nstrtt) nstrtt)
               (= (fref (aref WDATA.leafnode-list WDATA.nlf) ndt) ndt)
               (= (fref (aref WDATA.leafnode-list WDATA.nlf) ltmtx) 2)
               (= WDATA.nlf (+ WDATA.nlf 1))
-	      ;(csym::fprintf stderr "%ld end~%" WDATA.nlf)
-	      ;;(= (aref nff WORKER-ID) (+ (aref nff WORKER-ID) 1))
-	      #|(csym::fprintf stderr "type2 end~%")|#)
+	      )
             (begin
 	      (if (< ndpth PARA_LEVEL)
 		  (begin
@@ -683,14 +771,17 @@
 		      (= il (/ ia nnsont))
 		      (= it (% ia nnsont))
 		      (decl al int)
-		      ;;(= al (* (fref (aref (fref st-cltl -> pc-sons) il) -> nnson) (fref (aref (fref st-cltt -> pc-sons) it) -> nnson)))
-		      ;;(create-leafmtx (aref (fref (mref st-cltl) pc-sons) il) (aref (fref (mref st-cltt) pc-sons) it) 0 al)
-		      (handles create-leafmtx
+		      (= al (* (fref (aref resultCTlist (aref (fref (aref resultCTlist st-cltl) offsets) il)) nnson) 
+                   (fref (aref resultCTlist (aref (fref (aref resultCTlist st-cltt) offsets) it)) nnson)))
+		      (create_leafmtx (aref (fref (aref resultCTlist st-cltl) offsets) il) (aref (fref (aref resultCTlist st-cltt) offsets) it) 0 al)
+		      (handles create_leafmtx
 			(:put from j1 to j2
 			      (= this.st-cltl st-cltl)
 			      (= this.st-cltt st-cltt)
 			      (= this.i1 j1)
-			      (= this.i2 j2))
+			      (= this.i2 j2)
+            ;;(csym::fprintf stderr "%d %d %d %d~%" this.st-cltl this.st-cltt this.i1 this.i2)
+            )
 			(:get)))
 		    )
 		(begin
@@ -699,12 +790,12 @@
 		    (= il (/ ia nnsont))
 		    (= it (% ia nnsont))
 		    (decl al int)
-		    ;;(= al (* (fref (aref (fref st-cltl -> pc-sons) il) -> nnson) (fref (aref (fref st-cltt -> pc-sons) it) -> nnson)))
-		    ;;(create-leafmtx (aref (fref (mref st-cltl) pc-sons) il) (aref (fref (mref st-cltt) pc-sons) it) 0 al)
+		    (= al (* (fref (aref resultCTlist (aref (fref (aref resultCTlist st-cltl) offsets) il)) nnson) (fref (aref resultCTlist (aref (fref (aref resultCTlist st-cltt) offsets) it)) nnson)))
+		    (create_leafmtx (aref (fref (aref resultCTlist st-cltl) offsets) il) (aref (fref (aref resultCTlist st-cltt) offsets) it) 0 al)
 		    )
 		  )
 		)
-	      )))))|#
+	)))))
 
 (def (csym::dist-2cluster st-cltl st-cltt) (fn double int int)
  (def zs double 0.0) (decl id int)
@@ -788,10 +879,10 @@
   (def temp (ptr cluster))
   (= temp (ptr (aref resultCTlist root)))
   (def width double (fref (mref temp) zwdth))
-  ;;(csym::fprintf f "%lf~%" width)
+  (csym::fprintf f "%lf~%" width)
   (if (== (fref (mref temp) nnson) 2)
     (begin
-      (csym::fprintf f "%lf~%" width)
+      ;;(csym::fprintf f "%lf~%" width)
       (csym::checkClusterTree f (aref (fref (mref temp) offsets) 0))
       (csym::checkClusterTree f (aref (fref (mref temp) offsets) 1))
     )
@@ -1668,4 +1759,7 @@
   ;;MPI_Allgatherv begin
   (csym::MPI_Barrier MPI_COMM_WORLD)
   (csym::MPI_Allgatherv (ptr (aref privateCTlist 0)) (* countR (sizeof cluster)) MPI_BYTE (ptr (aref resultCTlist 0)) length_list_BYTE pre_BYTE MPI_BYTE MPI_COMM_WORLD)
+  (free privateCTlist)
+  (free length_list)
+  (free length_list_BYTE)
 )
