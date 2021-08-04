@@ -61,7 +61,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,double (*gmid)[
 void qsort_col_leafmtx(leafmtx *st_leafmtx,int first,int last);
 void qsort_row_leafmtx(leafmtx *st_leafmtx,int first,int last);
 int med3(int nl,int nr,int nlr2);
-void create_leafmtx(leafmtx *st_leafmtx,cluster *st_cltl,cluster *st_cltt,double param[],int *lnmtx,int nffc,int *nlf);
+void create_leafmtx(leafmtx *temp_leafmtx,cluster *stcltl,cluster *st_cltt,double param[],int *lnmtx,int nffc,int nlf);
 double dist_2cluster(cluster *st_cltl,cluster *st_cltt);
 void count_lntmx(cluster *st_cltl,cluster *st_cltt,double param[],int *lnmtx,int nffc);
 void cal_bndbox_cog(cluster *st_clt,double (*zgmid)[3],int *lod,int nofc);
@@ -224,7 +224,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
   
   nlf = 0;
   start = get_wall_time();
-  create_leafmtx(st_leafmtx,st_clt,st_clt,param,lnmtx,nffc,&nlf);
+  create_leafmtx(st_leafmtx,st_clt,st_clt,param,lnmtx,nffc,nlf);
   end = get_wall_time();
   spent = end - start;
   printf("nlf:%d\n",nlf);
@@ -306,42 +306,59 @@ int med3(int nl,int nr,int nlr2){
   return med3;
 }
 
-void create_leafmtx(leafmtx *st_leafmtx,cluster *st_cltl,cluster *st_cltt,
-                    double param[],int *lnmtx,int nffc,int *nlf){
+void create_leafmtx(leafmtx *temp_leafmtx,cluster *st_cltl,cluster *st_cltt,
+                    double param[],int *lnmtx,int nffc,int nlf){
   int ndl = st_cltl->nsize * nffc;
   int ndt = st_cltt->nsize * nffc;
   int nstrtl = st_cltl->nstrt;
   int nstrtt = st_cltt->nstrt;
   int nnsonl = st_cltl->nnson;
   int nnsont = st_cltt->nnson;
+  int st_cltl_depth = st_cltl->ndpth;
+  int st_cltt_depth = st_cltt->ndpth;
   int il,it;
-
+  int my_num = omp_get_thread_num();
   double nleaf = param[41];
   double zeta = param[51];
   double zdistlt = dist_2cluster(st_cltl,st_cltt);
+
   if((st_cltl->zwdth * zeta <= zdistlt || st_cltt->zwdth * zeta <= zdistlt) && (ndl >= nleaf && ndt >= nleaf)){
-    //st_leafmtx[*nlf] = (leafmtx *)malloc(sizeof(leafmtx));
-    st_leafmtx[*nlf].nstrtl = nstrtl;
-    st_leafmtx[*nlf].ndl = ndl;
-    st_leafmtx[*nlf].nstrtt = nstrtt;
-    st_leafmtx[*nlf].ndt = ndt;
-    st_leafmtx[*nlf].kt = 0;
-    st_leafmtx[*nlf].ltmtx = 1;
-    *nlf = *nlf + 1;
+    int my_nlf = my_num*nlf + countlist[my_num];
+    temp_leafmtx[my_nlf].nstrtl = nstrtl;
+    temp_leafmtx[my_nlf].ndl = ndl;
+    temp_leafmtx[my_nlf].nstrtt = nstrtt;
+    temp_leafmtx[my_nlf].ndt = ndt;
+    temp_leafmtx[my_nlf].kt = 0;
+    temp_leafmtx[my_nlf].ltmtx = 1;
+    countlist[my_num] = countlist[my_num] + 1;
+  }else if(nnsonl == 0 || nnsont == 0 || ndl <= nleaf || ndt <= nleaf){
+    int my_nlf = my_num*nlf + countlist[my_num];
+    temp_leafmtx[my_nlf].nstrtl = nstrtl;
+    temp_leafmtx[my_nlf].ndl = ndl;
+    temp_leafmtx[my_nlf].nstrtt = nstrtt;
+    temp_leafmtx[my_nlf].ndt = ndt;
+    temp_leafmtx[my_nlf].ltmtx = 2;
+    countlist[my_num] = countlist[my_num] + 1;
   }else{
-    if(nnsonl == 0 || nnsont == 0 || ndl <= nleaf || ndt <= nleaf){
-      //st_leafmtx[*nlf]= (leafmtx *)malloc(sizeof(leafmtx));
-      st_leafmtx[*nlf].nstrtl = nstrtl;
-      st_leafmtx[*nlf].ndl = ndl;
-      st_leafmtx[*nlf].nstrtt = nstrtt;
-      st_leafmtx[*nlf].ndt = ndt;
-      st_leafmtx[*nlf].ltmtx = 2;
-      *nlf = *nlf + 1;
+    if(st_cltl_depth == 1){
+#pragma omp parallel
+      {
+	int my_num = omp_get_thread_num(); 
+	if(my_num == 0){
+	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[0],st_cltt->pc_sons[0],param,lnmtx,nffc,nlf);
+	}else if(my_num == 1){
+	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[0],st_cltt->pc_sons[1],param,lnmtx,nffc,nlf);
+	}else if(my_num == 2){
+	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[1],st_cltt->pc_sons[0],param,lnmtx,nffc,nlf);
+	}else if(my_num == 3){
+	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[1],st_cltt->pc_sons[1],param,lnmtx,nffc,nlf);
+	}
+      }
     }else{
       for(il=0;il<nnsonl;il++){
-        for(it=0;it<nnsont;it++){
-          create_leafmtx(st_leafmtx,st_cltl->pc_sons[il],st_cltt->pc_sons[it],param,lnmtx,nffc,nlf);
-        }
+	for(it=0;it<nnsont;it++){
+	  create_leafmtx(temp_leafmtx,st_cltl->pc_sons[il],st_cltt->pc_sons[it],param,lnmtx,nffc,nlf);
+	}
       }
     }
   }
