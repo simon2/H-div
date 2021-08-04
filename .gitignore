@@ -58,7 +58,10 @@ data_pro1804/input_100ts.txt.bin
 data_pro1804/input_human_1x1.txt_cb_0.3_5_10_1.png
 data_pro1804/input_human_1x1.txt_cb_0.3_50_100_1.bin
 hmat_div_cilk
-#hmat_div.c#
+hmat_div
 data_pro1804/shperepyramid.png
 data_pro1804/sphere.png
 data_pro1804/spherecube.png
+*.sh
+B*
+core*
