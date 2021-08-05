@@ -19,8 +19,23 @@ If you want to cite this paper, please use:
   doi={10.2197/ipsjjip.27.840}
 }
 ```
+# Requirements
+- An Intel multi-core CPU
+- To run Cilk Plus versions, Intel C++ Compiler version >= 17
+- To run tascell versions, 
+  - tascell compiler version later than Jan 21, 2019.
+  - GCC version >= 4.8.5
 
-# contributors
+# Installation
+```
+git clone https://github.com/simon2/H-div.git
+```
+# Compile & Execution
+```
+make hmat_div
+./hmat_div
+```
+# Contributors
 - [Zhengyang Bai](https://github.com/simon2)
 - [Tasuku Hiraishi](https://github.com/tastasgit)
 - Hiroshi Nakashima
