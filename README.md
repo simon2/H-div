@@ -4,7 +4,7 @@ H-div is a parallelized implementation of matrix partitioning in construction of
 
 To learn more about Tascell, please visit [Tascell introduction](http://ais.sys.i.kyoto-u.ac.jp/~task/tascell/index.html) or [Tascell github repository](https://github.com/tascell/sc-tascell)
 
-For details of this implementation, please read paper _Parallelization of Matrix Partitioning in Construction of Hierarchical Matrices using Task Parallel Languages_
+For details of this implementation, please read paper [_Parallelization of Matrix Partitioning in Construction of Hierarchical Matrices using Task Parallel Languages_](https://www.jstage.jst.go.jp/article/ipsjjip/27/0/27_840/_article/-char/ja/)
 
 If you want to cite this paper, please use:
 ```
