@@ -1,6 +1,6 @@
 # Synopsis
 
-H-div is a parallelized implementation of matrix partitioning in construction of hierarchical matrices using Cilk Plus and Tascell based on a sequential Fortran implementation in H-lapack coded by Prof. Akihito Ida.
+H-div is a parallelized implementation of matrix partitioning in construction of hierarchical matrices using Cilk Plus and Tascell based on a sequential Fortran implementation in HACApK library coded by Prof. Akihito Ida.
 
 To learn more about Tascell, please visit [Tascell introduction](http://ais.sys.i.kyoto-u.ac.jp/~task/tascell/index.html) or [Tascell github repository](https://github.com/tascell/sc-tascell)
 
