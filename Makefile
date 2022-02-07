@@ -30,6 +30,9 @@ hmat_div: hmat_div.c data/bem_file.c
 hmat_div_direct: hmat_div_direct.c data/bem_file.c
 	$(CC) $(COPT) -o $@ $^
 
+hmat_div_array: hmat_div_array.c data/bem_file.c
+	$(CC) $(COPT) -o $@ $^
+
 # Cilk Plus version
 hmat_div_cilk: hmat_div_cilk.c data/bem_file.c
 	$(CC) $(COPT) -o $@ $^
