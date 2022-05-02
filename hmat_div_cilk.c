@@ -172,10 +172,10 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   spent = end - start;
   printf("cluster tree time spent:%.10f\n",spent);
 
-  FILE *f;
-  f = fopen("hmat_cilk.txt","w");
-  checkCT(f,st_clt);
-  fclose(f);
+  //FILE *f;
+  //f = fopen("hmat_cilk.txt","w");
+  //checkCT(f,st_clt);
+  //fclose(f);
 
   ndpth = 0;
   free(tempgmid);
@@ -199,7 +199,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,   //the H-matr
   countlist = (int **)malloc(nworkers*sizeof(int*));
 
   //lel = nlf/nworkers*3;
-  int nlf_max_for_each_worker = (long)nlf * 10 / nworkers;
+  int nlf_max_for_each_worker = (long)nlf * 5 / nworkers;
   printf("nlf_max_for_each_worker: %d\n",nlf_max_for_each_worker);
   leafmtx *restrict temp_leafmtx;
   {

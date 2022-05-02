@@ -1,6 +1,6 @@
 CC=icc
 CXX=icpc
-COPT=-std=c99 -O3 -xavx2 -g
+COPT=-std=c11 -mcmodel=medium -shared-intel -O2 -xavx2 -g
 COPT_OMP=-qopenmp
 
 TARGETS = \
@@ -71,8 +71,4 @@ hmat_div_tcell: hmat_div.tcell
 
 # Parallelized by Tascell and taking data locality into consider.
 hmat_div_locality: hmat_div_locality.tcell
-	sc2c $<
-
-# Parallelized by Tascell on distributed memory systems (baseline version)
-hmat_dist: hmat_dist.tcell
 	sc2c $<

@@ -71,6 +71,9 @@ int LN = 30000000;
 cluster* CTlist;
 int countCT = 0; 
 
+double middle;
+int middle_flag = 0;
+
 int bal[32];
 int main(int argc, char **argv){
   /******** read file *********/
@@ -178,6 +181,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
   end = get_wall_time();
   spent = end - start;
   printf("cluster tree time spent:%.10f\n",spent);
+  printf("breakdown:%.10f\n",middle-start);
 
   ndpth = 0;
   start = get_wall_time();
@@ -430,6 +434,10 @@ int create_ctree_ssgeom(int st_clt,   //the current node
       }
       count_node++;
     }else{
+      if(middle_flag == 0){
+        middle = get_wall_time();
+        middle_flag++;
+      }
       nson = 2;
       st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson);
       if(ndpth > depth_max){
