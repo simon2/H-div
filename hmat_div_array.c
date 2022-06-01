@@ -16,13 +16,10 @@ typedef struct cluster cluster;
 struct cluster{
   int ndim;
   int nstrt,nsize,ndpth,nnson,nmbr;
-  int ndscd;                         //number of descendants                                                                    
-  //double *bmin;                      //bounding box                                                                             
-  //double *bmax;
+  int ndscd;                         //number of descendants
   double bmin[3];
   double bmax[3];
   double zwdth;
-  //cluster **pc_sons;
   int offsets[2];
   int nnsons;
   long nnnd;
@@ -327,21 +324,9 @@ int create_cluster(int nmbr,int ndpth,int nstrt,int nsize,int ndim,int nson){
   CTlist[st_clt].nnson = nson;
   CTlist[st_clt].nmbr = nmbr;
   CTlist[st_clt].ndpth = ndpth;
-  //CTlist[st_clt].pc_sons = (cluster **)malloc(nson * sizeof(cluster*));
 
   return st_clt;
 }
-
-/*void free_st_clt(cluster *st_clt){
-  int ic;
-  int nnson = st_clt->nnson;
-  for(ic=0;ic<nnson;ic++){
-    free_st_clt(st_clt->pc_sons[ic]);
-  }
-  free(st_clt->bmin);
-  free(st_clt->bmax);
-  free(st_clt->pc_sons);
-}*/
 
 /****create cluster tree******/
 int create_ctree_ssgeom(int st_clt,   //the current node
@@ -460,8 +445,6 @@ int create_ctree_ssgeom(int st_clt,   //the current node
   }
   CTlist[st_clt].ndscd = nd;
   //bounding box
-  //st_clt->bmin = (double *)malloc(3*sizeof(double));
-  //st_clt->bmax = (double *)malloc(3*sizeof(double));
   double zeps = 1.0e-5;
   if(CTlist[st_clt].nnson > 0){
     for(id=0;id<ndim;id++){
@@ -514,7 +497,6 @@ int create_ctree_ssgeom(int st_clt,   //the current node
   //end of bounding box
   return st_clt;
 }
-
 
 double get_wall_time(){
   struct timeval time;
