@@ -2,6 +2,7 @@ CC=icc
 CXX=icpc
 COPT=-std=c11 -mcmodel=medium -shared-intel -O2 -xavx2 -g
 COPT_OMP=-qopenmp
+COPT_MKL=-mkl
 
 TARGETS = \
 hmat_div \
@@ -31,7 +32,7 @@ hmat_div_direct: hmat_div_direct.c data/bem_file.c
 	$(CC) $(COPT) -o $@ $^
 
 hmat_div_array: hmat_div_array.c data/bem_file.c
-	$(CC) $(COPT) -o $@ $^
+	$(CC) $(COPT) -o $@ $^ $(COPT_MKL)
 
 # Cilk Plus version
 hmat_div_cilk: hmat_div_cilk.c data/bem_file.c

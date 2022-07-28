@@ -311,6 +311,7 @@ enum bi_format read_bem_input (FILE* fp, struct bem_input* pbin, enum bi_format 
 			     pbin->nNodePerFace, fmt);
   // Allocate and calculate coordOfFace
   pbin->coordOfFace = (double(*)[3]) malloc (pbin->nFace * 3 * sizeof(double));
+  pbin->face2node = (int(*)[3]) malloc (pbin->nFace * 3 * sizeof(int));
   for(int64_t i=0; i < pbin->nFace; i++){
     const int64_t ncpf = pbin->nNodePerFace;
     double (* const con)[3] = pbin->coordOfNode;
@@ -328,6 +329,7 @@ enum bi_format read_bem_input (FILE* fp, struct bem_input* pbin, enum bi_format 
       pbin->coordOfFace[i][0] += con[pid][0];
       pbin->coordOfFace[i][1] += con[pid][1];
       pbin->coordOfFace[i][2] += con[pid][2];
+      pbin->face2node[i][j] = (int)pid;
     }
     // Divide by ncpf to calcuate the average
     pbin->coordOfFace[i][0] /= (double) ncpf;
