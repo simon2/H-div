@@ -9,7 +9,7 @@
 #include <assert.h>
 #endif
 
-#define INPUT_DEFAULT "bem_data/input_50ms.txt"
+#define INPUT_DEFAULT "bem_data/input_10ts.txt"
 
 /*********define cluster************/
 typedef struct cluster cluster;
@@ -310,7 +310,7 @@ void create_leafmtx(leafmtx *st_leafmtx,cluster *st_cltl,cluster *st_cltt,
   double nleaf = param[41];
   double zeta = param[51];
   double zdistlt = dist_2cluster(st_cltl,st_cltt);
-  if((st_cltl->zwdth * zeta <= zdistlt || st_cltt->zwdth * zeta <= zdistlt) && (ndl >= nleaf && ndt >= nleaf)){
+  if((st_cltl->zwdth <= zdistlt * zeta || st_cltt->zwdth <= zdistlt * zeta) && (ndl >= nleaf && ndt >= nleaf)){
     //st_leafmtx[*nlf] = (leafmtx *)malloc(sizeof(leafmtx));
     st_leafmtx[*nlf].nstrtl = nstrtl;
     st_leafmtx[*nlf].ndl = ndl;
@@ -363,7 +363,7 @@ void count_lntmx(cluster *st_cltl,cluster *st_cltt,double param[],int *lnmtx,int
   double nleaf = param[41];
   double zeta = param[51];
   double zdistlt = dist_2cluster(st_cltl,st_cltt);
-  if ((st_cltl->zwdth * zeta <= zdistlt || st_cltt->zwdth * zeta <= zdistlt) && (ndl >= nleaf && ndt >= nleaf)){
+  if ((st_cltl->zwdth  <= zdistlt * zeta || st_cltt->zwdth <= zdistlt * zeta) && (ndl >= nleaf && ndt >= nleaf)){
     lnmtx[0] = lnmtx[0] + 1;
   }else{
     if(nnsonl == 0 || nnsont == 0 || ndl <= nleaf || ndt <= nleaf){
@@ -380,7 +380,7 @@ void count_lntmx(cluster *st_cltl,cluster *st_cltt,double param[],int *lnmtx,int
 }
 
 void cal_bndbox_cog(cluster *st_clt,double (*zgmid)[3],int *lod,int nofc){
-  int ndim = st_clt->ndim;
+  int ndim = 3;
   int id,il;
   st_clt->bmin = (double *)malloc(3*sizeof(double));
   st_clt->bmax = (double *)malloc(3*sizeof(double));
@@ -418,19 +418,19 @@ void cal_bndbox_cog(cluster *st_clt,double (*zgmid)[3],int *lod,int nofc){
   }
   double zwdth = (st_clt->bmax[0] - st_clt->bmin[0]) * (st_clt->bmax[0] - st_clt->bmin[0]);
   for(id=1;id<ndim;id++){
-    zwdth = zwdth + (st_clt->bmax[id] - st_clt->bmin[id]) * (st_clt->bmax[id] - st_clt->bmin[id]);
+    zwdth += (st_clt->bmax[id] - st_clt->bmin[id]) * (st_clt->bmax[id] - st_clt->bmin[id]);
   }
   zwdth = sqrt(zwdth);
   for(id=0;id<ndim;id++){
     double bdiff = st_clt->bmax[id] - st_clt->bmin[id];
     if(bdiff < zeps * zwdth){
-      st_clt->bmax[id] = st_clt->bmax[id] + 0.5 * (zeps * zwdth - bdiff);
-      st_clt->bmin[id] = st_clt->bmin[id] - 0.5 * (zeps * zwdth - bdiff);
+      st_clt->bmax[id] += 0.5 * (zeps * zwdth - bdiff);
+      st_clt->bmin[id] -= 0.5 * (zeps * zwdth - bdiff);
     }
   }
   zwdth = (st_clt->bmax[0] - st_clt->bmin[0]) * (st_clt->bmax[0] - st_clt->bmin[0]);
   for(id=1;id<ndim;id++){
-    zwdth = (st_clt->bmax[id] - st_clt->bmin[id]) * (st_clt->bmax[id] - st_clt->bmin[id]);
+    zwdth += (st_clt->bmax[id] - st_clt->bmin[id]) * (st_clt->bmax[id] - st_clt->bmin[id]);
   }
   st_clt->zwdth = sqrt(zwdth);
 }
@@ -454,6 +454,7 @@ cluster * create_cluster(int nmbr,int ndpth,int nstrt,int nsize,int ndim,int nso
   cluster *st_clt;
   st_clt = (cluster *)malloc(sizeof(cluster));
   nmbr = nmbr + 1;
+  count_node++;
   st_clt->nstrt = nstrt;
   st_clt->nsize = nsize;
   st_clt->ndim = ndim;
@@ -505,8 +506,8 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
 			                        int ndim,          //number of dimension (default is 3)
 			                        int nclst){        //number of cluster
   int id,il,nson;
-  double minsz = param[21];
-  double zcoef = param[31];
+  double minsz = 50.0;
+  double zcoef = 1.1;
   double zlmin[ndim],zlmax[ndim];
   ndpth = ndpth + 1;
 #ifdef DEBUG
@@ -522,7 +523,6 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
     if(ndpth > depth_max){
       depth_max = ndpth;
     }
-    count_node++;
   }else{
     for(id=0;id<ndim;id++){
       zlmin[id] = zgmid[lod[0]][id];
@@ -574,7 +574,6 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
       if(ndpth > depth_max){
         depth_max = ndpth;
       }
-      count_node++;
       /* nson = 1; */
       /* st_clt = create_cluster(nclst,ndpth,nsrt,nd,ndim,nson); */
       /* if(ndpth > depth_max){ */
@@ -589,7 +588,7 @@ cluster * create_ctree_ssgeom(cluster *st_clt,   //the current node
       if(ndpth > depth_max){
 	      depth_max = ndpth;
       }
-      count_node++;
+      // count_node++;
       int nsrt1 = nsrt;
       int nd1 = nl;
       st_clt->pc_sons[0] = create_ctree_ssgeom(st_clt->pc_sons[0],zgmid,param,lod,
