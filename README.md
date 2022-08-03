@@ -8,19 +8,6 @@ To learn more about Tascell, please visit [Tascell introduction](http://ais.sys.
 
 For details of this implementation, please read paper [_Parallelization of Matrix Partitioning in Construction of Hierarchical Matrices using Task Parallel Languages_](https://www.jstage.jst.go.jp/article/ipsjjip/27/0/27_840/_article/-char/ja/)
 
-If you want to cite this paper, please use:
-```
-@article{Zhengyang Bai2019,
-  title={Parallelization of Matrix Partitioning in Construction of Hierarchical Matrices using Task Parallel Languages},
-  author={Zhengyang Bai and Tasuku Hiraishi and Hiroshi Nakashima and Akihiro Ida and Masahiro Yasugi},
-  journal={Journal of Information Processing},
-  volume={27},
-  number={ },
-  pages={840-851},
-  year={2019},
-  doi={10.2197/ipsjjip.27.840}
-}
-```
 # Requirements
 - An Intel multi-core CPU
 - To run Cilk Plus versions, Intel C++ Compiler version >= 17
