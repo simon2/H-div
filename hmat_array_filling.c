@@ -10,7 +10,13 @@
 #include <assert.h>
 #endif
 
-#define INPUT_DEFAULT "bem_data/input_108kp22.txt"
+// #define INPUT_DEFAULT "bem_data/input_10ts.txt"             //small data for dbg
+#define INPUT_DEFAULT "bem_data/input_100ts.txt"            //Sphere
+// #define INPUT_DEFAULT "bem_data/input_10ts_c30_3_3_4.txt"   //SphereCube
+// #define INPUT_DEFAULT "bem_data/input_10ts_p30_4.txt"       //SpherePyramid
+// #define INPUT_DEFAULT "bem_data/input_216h_5x10.txt"        //Humans
+// #define INPUT_DEFAULT "bem_data/input_84tp7_30_2p.txt"      //SpherePyramidPyramid
+
 
 /*********define cluster************/
 typedef struct cluster cluster;
@@ -45,8 +51,7 @@ struct leafmtxp{
   int nlfkt;                         //number ot partitions approximated
 };
 
-void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,double (*gmid)[3],double (*bmid)[3],int (*face2node)[3],
-                                            double param[],int *lod,int *lnmtx,int nofc,int nffc,int ndim);
+void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,double param[],int *lod,int *lnmtx,int nofc,int nffc,int ndim);
 int med3(int nl,int nr,int nlr2);
 void qsort_col_leafmtx(leafmtx *st_leafmtx,int first,int last);
 void qsort_row_leafmtx(leafmtx *st_leafmtx,int first,int last);
@@ -180,6 +185,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
   count_node = 0;
 
   double start,end,spent;
+  double start2,end2,spent2;
   start = get_wall_time();
 #ifdef DEBUG
   lod0 = lodfc;
@@ -191,10 +197,6 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
   spent = end - start;
   printf("cluster tree time spent:%.10f\n",spent);
   printf("breakdown:%.10f\n",middle-start);
-
-  for(il=0;il<ndf;il++){
-    printf("face2node: %d %d %d\n",face2node[il][0],face2node[il][1],face2node[il][2]);
-  }
 
   ndpth = 0;
   start = get_wall_time();
@@ -210,12 +212,12 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
   printf("nlf:%d\n",nlf);
   
   nlf = 0;
-  start = get_wall_time();
+  start2 = get_wall_time();
   create_leafmtx(st_leafmtx,st_clt,st_clt,param,lnmtx,nffc,&nlf,gmid, bmid, face2node);
-  end = get_wall_time();
-  spent = end - start;
+  end2 = get_wall_time();
+  spent2 = end - start;
   printf("nlf:%d\n",nlf);
-  printf("block cluster tree time spent:%.10f\n",spent);
+  printf("block cluster tree time spent:%.10f\n",spent2);
   printf("depth_max:%d  count_node:%d\n",depth_max,count_node);
 
   qsort_row_leafmtx(st_leafmtx,0,nlf-1);
@@ -239,7 +241,9 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
   fill_leafmtx(st_leafmtx, gmid, bmid, face2node, 0.0, lnmtx, ndf, nlf);
   end = get_wall_time();
   spent = end - start;
+  spent2 = end - start2;
   printf("filling time:%.10f\n",spent);
+  printf("BCT + filling time:%.10f\n",spent2);
   printf("nlf:%d\n",nlf);
 }
 
@@ -833,7 +837,8 @@ void fill_leafmtx(leafmtx *st_lf, double (*face)[3], double (*node)[3], int (*fa
       }
 
       int kt = acaplus(st_lf[ip].a2, st_lf[ip].a1, ndl, ndt, nstrtl, nstrtt, face, node, face2node, kparam, eps, znrmmat, ACA_EPS);
-      printf("DEBUGING: kt=%d, kparam=%d, nstrtl=%d, nstrtt=%d, ndl=%d, ndt=%d\n", kt, kparam, nstrtl, nstrtt, ndl, ndt);
+      st_lf[ip].kt = kt;
+      // printf("DEBUGING: kt=%d, kparam=%d, nstrtl=%d, nstrtt=%d, ndl=%d, ndt=%d\n", kt, kparam, nstrtl, nstrtt, ndl, ndt);
       
       if(kt > k_max) k_max = kt;
       else if(kt < k_min) k_min = kt;

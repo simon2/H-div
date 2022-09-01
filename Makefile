@@ -1,8 +1,9 @@
 CC=icc
 CXX=icpc
-COPT=-std=c11 -mcmodel=medium -shared-intel -O2 -xavx2 -g
+CMPI=mpiicc
+COPT=-std=c11 -mcmodel=medium -shared-intel -O0 -xavx2 -g
 COPT_OMP=-qopenmp
-COPT_MKL=-mkl
+COPT_MKL=-mkl=sequential
 
 TARGETS = \
 hmat_div \
@@ -32,7 +33,7 @@ hmat_div_direct: hmat_div_direct.c data/bem_file.c
 	$(CC) $(COPT) -o $@ $^
 
 hmat_div_array: hmat_div_array.c data/bem_file.c
-	$(CC) $(COPT) -o $@ $^ $(COPT_MKL)
+	$(CC) $(COPT) -o $@ $^
 
 # Cilk Plus version
 hmat_div_cilk: hmat_div_cilk.c data/bem_file.c
@@ -61,6 +62,20 @@ hmat_div_CT_cilk_parByLevel: hmat_div_CT_cilk_parByLevel.c
 # Sequential C++ version
 hmat_div.cpp: hmat_div.cpp
 	$(CXX) $(COPT) -o $@ $<
+
+# Filling versions
+hmat_array_filling: hmat_array_filling.c data/bem_file.c
+	$(CC) $(COPT) -o $@ $^ $(COPT_MKL)
+
+hmat_array_filling_wBCT: hmat_array_filling_wBCT.c data/bem_file.c
+	$(CC) $(COPT) -o $@ $^ $(COPT_MKL)
+
+# Filling in parallel by MPI & OpenMP
+hmat_array_filling_MPI: hmat_array_filling_MPI.c data/bem_file.c
+	$(CMPI) $(COPT) -o $@ $^ $(COPT_MKL)
+
+hmat_array_filling_dynamic: hmat_array_filling_dynamic.c data/bem_file.c
+	$(CMPI) $(COPT) $(COPT_OMP) -o $@ $^ $(COPT_MKL)
 
 # Sequential (SC version)
 hmat.c: hmat.sc

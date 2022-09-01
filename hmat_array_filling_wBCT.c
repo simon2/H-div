@@ -10,7 +10,12 @@
 #include <assert.h>
 #endif
 
-#define INPUT_DEFAULT "bem_data/input_338ts.txt"
+// #define INPUT_DEFAULT "bem_data/input_10ts.txt"             //small data for dbg
+#define INPUT_DEFAULT "bem_data/input_100ts.txt"            //Sphere
+// #define INPUT_DEFAULT "bem_data/input_10ts_c30_3_3_4.txt"   //SphereCube
+// #define INPUT_DEFAULT "bem_data/input_10ts_p30_4.txt"       //SpherePyramid
+// #define INPUT_DEFAULT "bem_data/input_216h_5x10.txt"        //Humans
+// #define INPUT_DEFAULT "bem_data/input_84tp7_30_2p.txt"      //SpherePyramidPyramid
 
 /*********define cluster************/
 typedef struct cluster cluster;
@@ -45,26 +50,25 @@ struct leafmtxp{
   int nlfkt;                         //number ot partitions approximated
 };
 
-void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,double (*gmid)[3],double (*bmid)[3],int (*face2node)[3],
-                                            double param[],int *lod,int *lnmtx,int nofc,int nffc,int ndim);
+void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp, double param[],int *lod,int *lnmtx,int nofc,int nffc,int ndim);
 int med3(int nl,int nr,int nlr2);
 void qsort_col_leafmtx(leafmtx *st_leafmtx,int first,int last);
 void qsort_row_leafmtx(leafmtx *st_leafmtx,int first,int last);
 void create_leafmtx(leafmtx *st_leafmtx,int st_cltl,int st_cltt,
-                    double param[],int *lnmtx,int nffc,int *nlf,double (*gmid)[3],double (*bmid)[3],int (*face2node)[3]);
+                    double param[],int *lnmtx,int nffc,int *nlf);
 double dist_2cluster(int st_cltl,int st_cltt);
 void count_lntmx(int st_cltl,int st_cltt,double param[],int *lnmtx,int nffc);
 int create_cluster(int nmbr,int ndpth,int nstrt,int nsize,int ndim,int nson);
 int create_ctree_ssgeom(int st_clt,double (*zgmid)[3],int (*face2node)[3],double param[],int ndpth,int ndscd,int nsrt,int nd,int md,int ndim,int nclst);
 
-int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, double (*face)[3], double (*node)[3], int (*face2node)[3], int kmax, double eps, double znrmmat, double pACA_EPS);
-void fill_sub_leafmtx(leafmtx *st_lf, double (*face)[3], double (*node)[3], int (*face2node)[3], double znrmmat);
+int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, int kmax, double eps, double znrmmat, double pACA_EPS);
+void fill_sub_leafmtx(leafmtx *st_lf, double znrmmat);
 int minabsvalloc_d(double* za, int nd);
 int maxabsvalloc_d(double* za, int nd);
-double entry_ij(int i, int j, double (*face)[3], double (*node)[3], int (*face2node)[3]);
+double entry_ij(int i, int j);
 double face_integral2(double xs[], double ys[], double zs[], double x, double y, double z);
-void comp_col(double* zaa, double *zab, int ndl, int ndt, int k, int it, double* col, int nstrtl, int nstrtt, double (*face)[3], double (*node)[3], int (*face2node)[3], int* lrow_done);
-void comp_row(double* zaa, double* zab, int ndl, int ndt, int k, int il, double* row, int nstrtl, int nstrtt, double (*face)[3], double (*node)[3], int (*face2node)[3], int* lrow_done);
+void comp_col(double* zaa, double *zab, int ndl, int ndt, int k, int it, double* col, int nstrtl, int nstrtt, int* lrow_done);
+void comp_row(double* zaa, double* zab, int ndl, int ndt, int k, int il, double* row, int nstrtl, int nstrtt, int* lrow_done);
 void cross_product(double* u, double* v, double* w);
 double dot_product(double* v, double* u, int n);
 void adotsub_dsm(double* zr, double* zaa, double* zu, int it, int ndl, int ndt, int mdl, int mdt);
@@ -80,9 +84,14 @@ void checkClusterTree2(int ndpth, int st_clt);
 int depth_max;
 int count_node;
 
+double (*zgmid)[3];
+double (*bgmid)[3];
+int (*f2n)[3];
+
 int LN = 30000000;
 cluster* CTlist;
 int countCT = 0; 
+int nNode;
 
 double middle;
 int middle_flag = 0;
@@ -111,12 +120,13 @@ int main(int argc, char **argv){
     }
     char line[100];
     countOfNode = bi.nNode;
-    coordOfNode = bi.coordOfNode;
+    bgmid = bi.coordOfNode;
     count = bi.nFace;
-    coordOfFace = bi.coordOfFace;
-    face2node = bi.face2node;
+    zgmid = bi.coordOfFace;
+    f2n = bi.face2node;
   }
   fclose(file);
+  nNode = countOfNode;
   double param[100];
   for(i=0;i<100;i++){
     param[i] = 0;
@@ -143,7 +153,7 @@ int main(int argc, char **argv){
     lod[i] = 0;
   }
   double start = get_wall_time();
-  supermatrix_construction_cog_leafmtrx(st_leafmtxp,coordOfFace,coordOfNode,face2node,param,lod,lnmtx,nofc,nffc,ndim);  // construction of Leaf-matrix 
+  supermatrix_construction_cog_leafmtrx(st_leafmtxp,param,lod,lnmtx,nofc,nffc,ndim);  // construction of Leaf-matrix 
   double end = get_wall_time();
   printf("MP time:%f\n", (end - start));
   return 0;
@@ -154,13 +164,10 @@ int *lod0;
 #endif
 
 void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-matrix
-					   double (*gmid)[3],            //coordination of objects
-             double (*bmid)[3],
-             int (*face2node)[3],
-					   double param[],int *lod,
-					   int *lnmtx,              //1:k-rank 2:dense 3:H-matrix
-					   int nofc,int nffc,       //number of elements in same coordination
-					   int ndim){
+                                          double param[],int *lod,
+                                          int *lnmtx,              //1:k-rank 2:dense 3:H-matrix
+                                          int nofc,int nffc,       //number of elements in same coordination
+                                          int ndim){
   int st_clt = 0;
   int i,nfl,nflkt,ip,il,ig;
   int nd = nofc * nffc;
@@ -176,10 +183,6 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
   int ndpth = 0;
   int ndscd = 0;
 
-  // for(il=0;il<ndf;il++){
-  //   printf("face: % %d %d\n",face2node[il][0],face2node[il][1],face2node[il][2]);
-  // }
-
   depth_max = 0;
   count_node = 0;
 
@@ -190,15 +193,10 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
 #endif 
 
   CTlist = (cluster*)malloc(sizeof(cluster) * LN);
-  st_clt = create_ctree_ssgeom(st_clt,gmid,face2node,param,ndpth,ndscd,nsrt,ndf,nofc,ndim,nclst);
+  st_clt = create_ctree_ssgeom(st_clt,zgmid,f2n,param,ndpth,ndscd,nsrt,ndf,nofc,ndim,nclst);
   end = get_wall_time();
   spent = end - start;
   printf("cluster tree time spent:%.10f\n",spent);
-  printf("breakdown:%.10f\n",middle-start);
-
-  for(il=0;il<ndf;il++){
-    printf("face: %f %f %f\n",gmid[il][0],gmid[il][1],gmid[il][2]);
-  }
 
   ndpth = 0;
   start = get_wall_time();
@@ -215,7 +213,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
   
   nlf = 0;
   start = get_wall_time();
-  create_leafmtx(st_leafmtx,st_clt,st_clt,param,lnmtx,nffc,&nlf,gmid, bmid, face2node);
+  create_leafmtx(st_leafmtx,st_clt,st_clt,param,lnmtx,nffc,&nlf);
   end = get_wall_time();
   spent = end - start;
   printf("nlf:%d\n",nlf);
@@ -298,7 +296,7 @@ int med3(int nl,int nr,int nlr2){
 }
 
 void create_leafmtx(leafmtx *st_leafmtx,int st_cltl,int st_cltt,
-                    double param[],int *lnmtx,int nffc,int *nlf, double (*face)[3], double (*node)[3], int (*face2node)[3]){
+                    double param[],int *lnmtx,int nffc,int *nlf){
   int ndl = CTlist[st_cltl].nsize * nffc;
   int ndt = CTlist[st_cltt].nsize * nffc;
   int nstrtl = CTlist[st_cltl].nstrt;
@@ -319,7 +317,7 @@ void create_leafmtx(leafmtx *st_leafmtx,int st_cltl,int st_cltt,
     st_leafmtx[*nlf].kt = 0;
     st_leafmtx[*nlf].ltmtx = 1;
     st_leafmtx[*nlf].ndpth = ndpth;
-    fill_sub_leafmtx(&st_leafmtx[*nlf], face, node, face2node, 0.0);
+    fill_sub_leafmtx(&st_leafmtx[*nlf], 0.0);
     *nlf = *nlf + 1;
   }else{
     if(nnsonl == 0 || nnsont == 0 || ndl <= nleaf || ndt <= nleaf){
@@ -329,12 +327,12 @@ void create_leafmtx(leafmtx *st_leafmtx,int st_cltl,int st_cltt,
       st_leafmtx[*nlf].ndt = ndt;
       st_leafmtx[*nlf].ltmtx = 2;
       st_leafmtx[*nlf].ndpth = ndpth;
-      fill_sub_leafmtx(&st_leafmtx[*nlf], face, node, face2node, 0.0);
+      fill_sub_leafmtx(&st_leafmtx[*nlf], 0.0);
       *nlf = *nlf + 1;
     }else{
       for(il=0;il<nnsonl;il++){
         for(it=0;it<nnsont;it++){
-          create_leafmtx(st_leafmtx,CTlist[st_cltl].offsets[il],CTlist[st_cltt].offsets[it],param,lnmtx,nffc,nlf,face, node, face2node);
+          create_leafmtx(st_leafmtx,CTlist[st_cltl].offsets[il],CTlist[st_cltt].offsets[it],param,lnmtx,nffc,nlf);
         }
       }
     }
@@ -575,7 +573,7 @@ int create_ctree_ssgeom(int st_clt,   //the current node
   return st_clt;
 }
 
-int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, double (*face)[3], double (*node)[3], int (*face2node)[3], int kmax, double eps, double znrmmat, double pACA_EPS){
+int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, int kmax, double eps, double znrmmat, double pACA_EPS){
   double *prow, *pcol, *pb_ref, *pa_ref;
   int *lrow_done, *lcol_done;
 
@@ -603,15 +601,14 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
   int j_ref = 0;
   pa_ref = (double *)malloc(ndl * sizeof(double));
 
-  comp_col(zaa, zab, ndl, ndt, k, j_ref, pa_ref, nstrtl, nstrtt, face, node, face2node, lrow_done);
-
-  double colnorm = cblas_dnrm2(ndl, pa_ref, INCY);
+  comp_col(zaa, zab, ndl, ndt, k, j_ref, pa_ref, nstrtl, nstrtt, lrow_done);
 
   int i_ref = minabsvalloc_d(pa_ref, ndl);
   double rownorm = fabs(pa_ref[i_ref]);
   pb_ref = (double *)malloc(ndt * sizeof(double));
-  comp_row(zaa, zab, ndl, ndt, k, i_ref, pb_ref, nstrtl, nstrtt, face, node, face2node, lcol_done);
-
+  
+  comp_row(zaa, zab, ndl, ndt, k, i_ref, pb_ref, nstrtl, nstrtt, lcol_done);
+  
   rownorm = cblas_dnrm2(ndt, pb_ref, INCY);
 
   double apxnorm = 0.0;
@@ -628,11 +625,10 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
     row_maxval = 0.0;
     int j = maxabsvalloc_d(pb_ref, ndt);
     row_maxval = fabs(pb_ref[j]);
-
     double zinvmax;
     if(row_maxval > col_maxval){
       if(j != j_ref){
-        comp_col(zaa, zab, ndl, ndt, k, j, pcol, nstrtl, nstrtt, face, node, face2node, lrow_done);
+        comp_col(zaa, zab, ndl, ndt, k, j, pcol, nstrtl, nstrtt, lrow_done);
       }else{
         for(il=0;il<ndl;il++){
           pcol[il] = pa_ref[il];
@@ -644,7 +640,7 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
       if(col_maxval < ACA_EPS && k >= 1){
         lstop_aca = 1;
       }else{
-        comp_row(zaa, zab, ndl, ndt, k, i, prow, nstrtl, nstrtt, face, node, face2node, lcol_done);
+        comp_row(zaa, zab, ndl, ndt, k, i, prow, nstrtl, nstrtt, lcol_done);
         if(fabs(pcol[i]) > 1.0e-20){
           zinvmax = 1.0 / pcol[i];
         }else{
@@ -657,7 +653,7 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
       }
     }else{
       if(i != i_ref){
-        comp_row(zaa, zab, ndl, ndt, k, i, prow, nstrtl, nstrtt, face, node, face2node, lcol_done);
+        comp_row(zaa, zab, ndl, ndt, k, i, prow, nstrtl, nstrtt, lcol_done);
       }else{
         for(il=0;il<ndt;il++){
           prow[il] = pb_ref[il];
@@ -669,7 +665,7 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
       if(row_maxval < ACA_EPS && k >= 1){
         lstop_aca = 1;
       }else{
-        comp_col(zaa, zab, ndl, ndt, k, j, pcol, nstrtl, nstrtt, face, node, face2node, lrow_done);
+        comp_col(zaa, zab, ndl, ndt, k, j, pcol, nstrtl, nstrtt, lrow_done);
         if(fabs(prow[j]) > 1.0e-20){
           zinvmax = 1.0 / prow[j];
         }else{
@@ -700,7 +696,7 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
         i = i_ref;
         while(i != (i_ref + ndl - 1) % ndl && rownorm < za_ACA_EPS && ntries_row > 0){
           if(lrow_done[i] == 0){
-            comp_row(zaa, zab, ndl, ndt, k+1, i, pb_ref, nstrtl, nstrtt, face, node, face2node, lcol_done);
+            comp_row(zaa, zab, ndl, ndt, k+1, i, pb_ref, nstrtl, nstrtt, lcol_done);
             rownorm = cblas_dnrm2(ndt, pb_ref, INCY);
             if(rownorm < ACA_EPS){
               lrow_done[i] = 1;
@@ -731,7 +727,7 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
         j = j_ref;
         while(j != (j_ref + ndt - 1) % ndt && colnorm < za_ACA_EPS && ntries_col > 0){
           if(lcol_done[j] == 0){
-            comp_col(zaa, zab, ndl, ndt, k+1, j, pa_ref, nstrtl, nstrtt, face, node, face2node, lrow_done);
+            comp_col(zaa, zab, ndl, ndt, k+1, j, pa_ref, nstrtl, nstrtt, lrow_done);
             colnorm = cblas_dnrm2(ndl, pa_ref, INCY);
             if(colnorm < ACA_EPS){
               lcol_done[j] = 1;
@@ -781,12 +777,10 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
 
 }
 
-void fill_sub_leafmtx(leafmtx *st_lf, double (*face)[3], double (*node)[3], int (*face2node)[3], double znrmmat){
-  // double start, end;
-  // start = get_wall_time();
+void fill_sub_leafmtx(leafmtx *st_lf, double znrmmat){
   double eps = 1.0e-8;
   double ACA_EPS = 0.9 * eps;
-  int kparam = 200;
+  int kparam = 50;
   int ip,il,it;
 
   int ndl = st_lf->ndl;
@@ -797,8 +791,6 @@ void fill_sub_leafmtx(leafmtx *st_lf, double (*face)[3], double (*node)[3], int 
   int ltmtx = st_lf->ltmtx;
   
   if(ltmtx == 1){
-    // double * zaa = (double*)malloc(sizeof(double) * ndl * kparam);
-    // double * zab = (double*)malloc(sizeof(double) * ndt * kparam);
     st_lf->a1 = (double*)malloc(sizeof(double) * ndt * kparam);
     st_lf->a2 = (double*)malloc(sizeof(double) * ndl * kparam);
     if(!st_lf->a1 || !st_lf->a2){
@@ -806,30 +798,16 @@ void fill_sub_leafmtx(leafmtx *st_lf, double (*face)[3], double (*node)[3], int 
       exit(99);
     }
 
-    int kt = acaplus(st_lf->a2, st_lf->a1, ndl, ndt, nstrtl, nstrtt, face, node, face2node, kparam, eps, znrmmat, ACA_EPS);
-    // int kt = acaplus(zaa, zab, ndl, ndt, nstrtl, nstrtt, face, node, face2node, kparam, eps, znrmmat, ACA_EPS);
-    printf("DEBUGING: kt=%d, kparam=%d, nstrtl=%d, nstrtt=%d, ndl=%d, ndt=%d\n", kt, kparam, nstrtl, nstrtt, ndl, ndt);
+    int kt = acaplus(st_lf->a2, st_lf->a1, ndl, ndt, nstrtl, nstrtt, kparam, eps, znrmmat, ACA_EPS);
+    // printf("#fill kt=%d, nstrtl=%d, nstrtt=%d, ndl=%d, ndt=%d\n", kt, nstrtl, nstrtt, ndl, ndt);
 
-    if(kt > kparam){ //Fortran: kt > kparam-1. kt is the rank.
+    if(kt > kparam){
       printf("WARNING: Insufficient k: kt=%d, kparam=%d, nstrtl=%d, nstrtt=%d, ndl=%d, ndt=%d\n", kt, kparam, nstrtl, nstrtt, ndl, ndt);
     }
 
     st_lf->a1 = (double *)realloc(st_lf->a1, kt * ndt * sizeof(double));//check if realloc is right
     st_lf->a2 = (double *)realloc(st_lf->a2, kt * ndl * sizeof(double));
-    // st_lf->a1 = (double*)malloc(sizeof(double) * ndt * kt);
-    // st_lf->a2 = (double*)malloc(sizeof(double) * ndl * kt);
 
-    // for(il=0;il<kt;il++){
-    //   for(it=0;it<ndt;it++){
-    //     st_lf->a1[il*ndt+it] = zab[il*ndt+it];
-    //   }
-    // }
-    // for(il=0;il<kt;il++){
-    //   for(it=0;it<ndl;it++){
-    //     st_lf->a2[il*ndl+it] = zaa[il*ndl+it];
-    //   }
-    // }
-    // free(zaa);free(zab);
 
   }else if(ltmtx == 2){
     st_lf->a1 = (double *)malloc(sizeof(double) * ns);
@@ -841,21 +819,19 @@ void fill_sub_leafmtx(leafmtx *st_lf, double (*face)[3], double (*node)[3], int 
       int ill = il + nstrtl;
       for(it=0;it<ndt;it++){
         int itt = it + nstrtt;
-        tempa1[il][it] = entry_ij(ill, itt, face, node, face2node);
+        tempa1[il][it] = entry_ij(ill, itt);
       }
     }
   }
-  // end = get_wall_time();
-  // printf("filling time spend: %f", end - start);
 }
 
-void comp_row(double* zaa, double* zab, int ndl, int ndt, int k, int il, double* row, int nstrtl, int nstrtt, double (*face)[3], double (*node)[3], int (*face2node)[3], int* lrow_done){
+void comp_row(double* zaa, double* zab, int ndl, int ndt, int k, int il, double* row, int nstrtl, int nstrtt, int* lrow_done){
   int it;
   for(it=0;it<ndt;it++){
     if(lrow_done[it] == 0){
       int ill = il + nstrtl;
       int itt = it + nstrtt;
-      row[it] = entry_ij(ill, itt, face, node, face2node);
+      row[it] = entry_ij(ill, itt);
     }
   }
 
@@ -872,14 +848,14 @@ void comp_row(double* zaa, double* zab, int ndl, int ndt, int k, int il, double*
   }
 }
 
-void comp_col(double* zaa, double* zab, int ndl, int ndt, int k, int it, double* col, int nstrtl, int nstrtt, double (*face)[3], double (*node)[3], int (*face2node)[3], int* lrow_done){
+void comp_col(double* zaa, double* zab, int ndl, int ndt, int k, int it, double* col, int nstrtl, int nstrtt, int* lrow_done){
   int il;
 
   for(il=0;il<ndl;il++){
     if(lrow_done[il] == 0){
       int ill = il + nstrtl;
       int itt = it + nstrtt;
-      col[il] = entry_ij(ill, itt, face, node, face2node);
+      col[il] = entry_ij(ill, itt);
     }
   }
 
@@ -922,23 +898,23 @@ int maxabsvalloc_d(double* za, int nd){
   return il;
 }
 
-double entry_ij(int i, int j, double (*face)[3], double (*node)[3], int (*face2node)[3]){
+double entry_ij(int i, int j){
   int il;
   int n[3];
   double xf[3], yf[3], zf[3];
   double xp, yp, zp;
 
-  xp = face[i][0];
-  yp = face[i][1];
-  zp = face[i][2];
+  xp = zgmid[i][0];
+  yp = zgmid[i][1];
+  zp = zgmid[i][2];
   
   for(il=0;il<3;il++){
-    n[il] = face2node[j][il];
+    n[il] = f2n[j][il];
   }
   for(il=0;il<3;il++){
-    xf[il] = node[n[il]][0];
-    yf[il] = node[n[il]][1];
-    zf[il] = node[n[il]][2];
+    xf[il] = bgmid[n[il]][0];
+    yf[il] = bgmid[n[il]][1];
+    zf[il] = bgmid[n[il]][2];
   }
 
   double result = face_integral2(xf, yf, zf, xp, yp, zp);
