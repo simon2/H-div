@@ -29,32 +29,14 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
   pa_ref = (double *)malloc(ndl * sizeof(double));
 
   comp_col(zaa, zab, ndl, ndt, k, j_ref, pa_ref, nstrtl, nstrtt, lrow_done);
-  // if(nstrtl==0 && nstrtt==2620 && ndl==2620 && ndt==10400){
-  //   int iib;
-  //   printf("#debug pa_ref ");
-  //   for(iib=0;iib<ndl;iib++){
-  //     printf("#debug %f\n", pa_ref[iib]);
-  //   }
-  // }
+
   double colnorm = cblas_dnrm2(ndl, pa_ref, INCY);
-  // if(nstrtl==0 && nstrtt==2620 && ndl==2620 && ndt==10400){
-  //   printf("#debug colnorm=%f\n",colnorm);
-  // }
   int i_ref = minabsvalloc_d(pa_ref, ndl);
   double rownorm = fabs(pa_ref[i_ref]);
   pb_ref = (double *)malloc(ndt * sizeof(double));
   comp_row(zaa, zab, ndl, ndt, k, i_ref, pb_ref, nstrtl, nstrtt, lcol_done);
-  // if(nstrtl==0 && nstrtt==2620 && ndl==2620 && ndt==10400){
-  //   int iib;
-  //   printf("#debug pb_ref ");
-  //   for(iib=0;iib<ndt;iib++){
-  //     printf("#debug %f\n", pb_ref[iib]);
-  //   }
-  // }
   rownorm = cblas_dnrm2(ndt, pb_ref, INCY);
-  // if(nstrtl==0 && nstrtt==2620 && ndl==2620 && ndt==10400){
-  //   printf("#debug rownorm=%f\n",rownorm);
-  // }
+
   double apxnorm = 0.0;
   int lstop_aca = 0;
   
@@ -69,14 +51,9 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
     row_maxval = 0.0;
     int j = maxabsvalloc_d(pb_ref, ndt);
     row_maxval = fabs(pb_ref[j]);
-    // if(nstrtl==0 && nstrtt==2620 && ndl==2620 && ndt==10400){
-    //   printf("#debug k=%d i=%d j=%d\n",k,i,j);
-    // }
+
     double zinvmax;
     if(row_maxval > col_maxval){
-      // if(nstrtl==0 && nstrtt==2620 && ndl==2620 && ndt==10400){
-      //   printf("here1\n");
-      // }
       if(j != j_ref){
         comp_col(zaa, zab, ndl, ndt, k, j, pcol, nstrtl, nstrtt, lrow_done);
       }else{
@@ -102,9 +79,6 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
         } 
       }
     }else{
-      // if(nstrtl==0 && nstrtt==2620 && ndl==2620 && ndt==10400){
-      //   printf("here2\n");
-      // }
       if(i != i_ref){
         comp_row(zaa, zab, ndl, ndt, k, i, prow, nstrtl, nstrtt, lcol_done);
       }else{
@@ -132,18 +106,6 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
     }
     lrow_done[i] = 1;
     lcol_done[j] = 1;
-    // if(nstrtl==0 && nstrtt==2620 && ndl==2620 && ndt==10400){
-    //   int iib;
-    //   printf("#debug prow ");
-    //   for(iib=0;iib<ndt;iib++){
-    //     printf("#debug %f\n", prow[iib]);
-    //   }
-    //   // int iib;
-    //   printf("#debug pcol ");
-    //   for(iib=0;iib<ndl;iib++){
-    //     printf("#debug %f\n", pcol[iib]);
-    //   }
-    // }
 
     if(i != i_ref){
       zinvmax = -pcol[i_ref];
@@ -175,10 +137,6 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
         i_ref = (i + ndl - 1) % ndl;
       }
     }
-    // if(nstrtl==0 && nstrtt==2620 && ndl==2620 && ndt==10400){
-    //   printf("#debug rownorm=%f\n",rownorm);
-    //   // printf("#debug colnorm=%f\n",colnorm);
-    // }
 
     if(j != j_ref){
       zinvmax = -prow[j_ref];
@@ -210,15 +168,8 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
         j_ref = (j + ndt - 1) % ndt;
       }
     }
-    // if(nstrtl==0 && nstrtt==2620 && ndl==2620 && ndt==10400){
-    //   // printf("#debug rownorm=%f\n",rownorm);
-    //   printf("#debug colnorm=%f\n",colnorm);
-    // }
 
     if(colnorm < ACA_EPS && rownorm < ACA_EPS && k >= 1){
-      // if(nstrtl==0 && nstrtt==2620 && ndl==2620 && ndt==10400){
-      //   printf("here4\n");
-      // }
       lstop_aca = 1;
       k = k + 1;
     }
@@ -230,9 +181,6 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
       }else{
         double compared = apxnorm * eps;
         if(blknorm < compared && rownorm < compared && colnorm < compared && k >= 1){
-          // if(nstrtl==0 && nstrtt==2620 && ndl==2620 && ndt==10400){
-          //   printf("here3\n");
-          // }
           lstop_aca = 1;
         }
       }
@@ -272,8 +220,6 @@ void fill_sub_leafmtx(struct leafmtx *st_lf, double znrmmat){
   int ltmtx = st_lf->ltmtx;
   
   if(ltmtx == 1){
-    // double * zaa = (double*)malloc(sizeof(double) * ndl * kparam);
-    // double * zab = (double*)malloc(sizeof(double) * ndt * kparam);
     st_lf->a1 = (double*)malloc(sizeof(double) * ndt * kparam);
     st_lf->a2 = (double*)malloc(sizeof(double) * ndl * kparam);
     if(!st_lf->a1 || !st_lf->a2){
@@ -282,8 +228,7 @@ void fill_sub_leafmtx(struct leafmtx *st_lf, double znrmmat){
     }
 
     int kt = acaplus(st_lf->a2, st_lf->a1, ndl, ndt, nstrtl, nstrtt, kparam, eps, znrmmat, ACA_EPS);
-    // int kt = acaplus(zaa, zab, ndl, ndt, nstrtl, nstrtt, face, node, face2node, kparam, eps, znrmmat, ACA_EPS);
-    printf("#fill kt=%d, nstrtl=%d, nstrtt=%d, ndl=%d, ndt=%d\n", kt, nstrtl, nstrtt, ndl, ndt);
+    // printf("#fill kt=%d, nstrtl=%d, nstrtt=%d, ndl=%d, ndt=%d\n", kt, nstrtl, nstrtt, ndl, ndt);
 
     if(kt > kparam){ //Fortran: kt > kparam-1. kt is the rank.
       printf("WARNING: Insufficient k: kt=%d, kparam=%d, nstrtl=%d, nstrtt=%d, ndl=%d, ndt=%d\n", kt, kparam, nstrtl, nstrtt, ndl, ndt);
@@ -291,20 +236,6 @@ void fill_sub_leafmtx(struct leafmtx *st_lf, double znrmmat){
 
     st_lf->a1 = (double *)realloc(st_lf->a1, kt * ndt * sizeof(double));//check if realloc is right
     st_lf->a2 = (double *)realloc(st_lf->a2, kt * ndl * sizeof(double));
-    // st_lf->a1 = (double*)malloc(sizeof(double) * ndt * kt);
-    // st_lf->a2 = (double*)malloc(sizeof(double) * ndl * kt);
-
-    // for(il=0;il<kt;il++){
-    //   for(it=0;it<ndt;it++){
-    //     st_lf->a1[il*ndt+it] = zab[il*ndt+it];
-    //   }
-    // }
-    // for(il=0;il<kt;il++){
-    //   for(it=0;it<ndl;it++){
-    //     st_lf->a2[il*ndl+it] = zaa[il*ndl+it];
-    //   }
-    // }
-    // free(zaa);free(zab);
 
   }else if(ltmtx == 2){
     st_lf->a1 = (double *)malloc(sizeof(double) * ns);
