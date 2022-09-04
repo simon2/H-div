@@ -13,10 +13,10 @@
 #endif
 
 // #define INPUT_DEFAULT "bem_data/input_10ts.txt"             //small data for dbg
-#define INPUT_DEFAULT "bem_data/input_100ts.txt"            //Sphere
+// #define INPUT_DEFAULT "bem_data/input_100ts.txt"            //Sphere
 // #define INPUT_DEFAULT "bem_data/input_10ts_c30_3_3_4.txt"   //SphereCube
 // #define INPUT_DEFAULT "bem_data/input_10ts_p30_4.txt"       //SpherePyramid
-// #define INPUT_DEFAULT "bem_data/input_216h_5x10.txt"        //Humans
+#define INPUT_DEFAULT "bem_data/input_216h_5x10.txt"        //Humans
 // #define INPUT_DEFAULT "bem_data/input_84tp7_30_2p.txt"      //SpherePyramidPyramid
 
 /*********define cluster************/
@@ -63,7 +63,7 @@ int create_cluster(int nmbr,int ndpth,int nstrt,int nsize,int ndim,int nson);
 int create_ctree_ssgeom(int st_clt,double (*zgmid)[3],int (*face2node)[3],double param[],int ndpth,int ndscd,int nsrt,int nd,int md,int ndim,int nclst);
 
 int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, int kmax, double eps, double znrmmat, double pACA_EPS);
-void fill_leafmtx(leafmtx *st_lf, double znrmmat, int *lnmtx, int nd, int from, int to);
+void fill_leafmtx(leafmtx *st_lf, double znrmmat, int *lnmtx, int nd, long long from, long long to);
 int minabsvalloc_d(double* za, int nd);
 int maxabsvalloc_d(double* za, int nd);
 double entry_ij(int i, int j);
@@ -245,7 +245,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
   }
 
   /**************** MPI LAOD BALANCING *************************/
-  int ncpc = 0;
+  long long ncpc = 0;
   double ncpc1 = 0.0;
   int ktp =11;
   int nrank;
@@ -261,6 +261,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
       ncpc += ndl * ndt;
     }
   }
+  printf("ncpc:%ld\n",ncpc);
   ncpc1 = (double)ncpc / nrank;
   int *lhp = (int*)malloc(sizeof(int)*(nrank+1));
   lhp[0] = 0;
@@ -283,7 +284,7 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
   }
   lhp[nrank] = nlf;
   /**************** MPI LAOD BALANCING end**********************/
-
+  printf("my_rank:%d, from:%ld, to:%ld\n",my_rank,lhp[my_rank],lhp[my_rank+1]);
   start = MPI_Wtime();
   fill_leafmtx(st_leafmtx, 0.0, lnmtx, ndf, lhp[my_rank],lhp[my_rank+1]);
   end = MPI_Wtime();
@@ -849,13 +850,14 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
 
 }
 
-void fill_leafmtx(leafmtx *st_lf, double znrmmat, int *lnmtx, int nd, int from, int to){
+void fill_leafmtx(leafmtx *st_lf, double znrmmat, int *lnmtx, int nd, long long from, long long to){
   double start,end;
   
   double eps = 1.0e-8;
   double ACA_EPS = 0.9 * eps;
   int kparam = 50;
-  int ip,il,it;
+  int il,it;
+  long long ip;
 
   int elem_sum = 0;
 

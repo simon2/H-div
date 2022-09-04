@@ -1,9 +1,10 @@
 CC=icc
 CXX=icpc
 CMPI=mpiicc
-COPT=-std=c11 -mcmodel=medium -shared-intel -O0 -xavx2 -g
+COPT=-std=c11 -mcmodel=medium -shared-intel -O3 -xavx2 -g
 COPT_OMP=-qopenmp
-COPT_MKL=-mkl=sequential
+COPT_MKL=-mkl
+COPT_MKL_SEQ=-mkl=sequential
 
 TARGETS = \
 hmat_div \

@@ -11,11 +11,11 @@
 #endif
 
 // #define INPUT_DEFAULT "bem_data/input_10ts.txt"             //small data for dbg
-#define INPUT_DEFAULT "bem_data/input_100ts.txt"            //Sphere
+// #define INPUT_DEFAULT "bem_data/input_100ts.txt"            //Sphere
 // #define INPUT_DEFAULT "bem_data/input_10ts_c30_3_3_4.txt"   //SphereCube
 // #define INPUT_DEFAULT "bem_data/input_10ts_p30_4.txt"       //SpherePyramid
 // #define INPUT_DEFAULT "bem_data/input_216h_5x10.txt"        //Humans
-// #define INPUT_DEFAULT "bem_data/input_84tp7_30_2p.txt"      //SpherePyramidPyramid
+#define INPUT_DEFAULT "bem_data/input_84tp7_30_2p.txt"      //SpherePyramidPyramid
 
 
 /*********define cluster************/
@@ -119,10 +119,10 @@ int main(int argc, char **argv){
     }
     char line[100];
     countOfNode = bi.nNode;
-    coordOfNode = bi.coordOfNode;
+    bgmid = bi.coordOfNode;
     count = bi.nFace;
-    coordOfFace = bi.coordOfFace;
-    face2node = bi.face2node;
+    zgmid = bi.coordOfFace;
+    f2n = bi.face2node;
   }
   fclose(file);
   double param[100];

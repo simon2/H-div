@@ -229,7 +229,8 @@ void fill_sub_leafmtx(struct leafmtx *st_lf, double znrmmat){
 
     int kt = acaplus(st_lf->a2, st_lf->a1, ndl, ndt, nstrtl, nstrtt, kparam, eps, znrmmat, ACA_EPS);
     // printf("#fill kt=%d, nstrtl=%d, nstrtt=%d, ndl=%d, ndt=%d\n", kt, nstrtl, nstrtt, ndl, ndt);
-
+    st_lf->kt = kt;
+    
     if(kt > kparam){ //Fortran: kt > kparam-1. kt is the rank.
       printf("WARNING: Insufficient k: kt=%d, kparam=%d, nstrtl=%d, nstrtt=%d, ndl=%d, ndt=%d\n", kt, kparam, nstrtl, nstrtt, ndl, ndt);
     }

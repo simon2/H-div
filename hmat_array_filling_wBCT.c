@@ -11,11 +11,11 @@
 #endif
 
 // #define INPUT_DEFAULT "bem_data/input_10ts.txt"             //small data for dbg
-#define INPUT_DEFAULT "bem_data/input_100ts.txt"            //Sphere
+// #define INPUT_DEFAULT "bem_data/input_100ts.txt"            //Sphere
 // #define INPUT_DEFAULT "bem_data/input_10ts_c30_3_3_4.txt"   //SphereCube
 // #define INPUT_DEFAULT "bem_data/input_10ts_p30_4.txt"       //SpherePyramid
 // #define INPUT_DEFAULT "bem_data/input_216h_5x10.txt"        //Humans
-// #define INPUT_DEFAULT "bem_data/input_84tp7_30_2p.txt"      //SpherePyramidPyramid
+#define INPUT_DEFAULT "bem_data/input_84tp7_30_2p.txt"      //SpherePyramidPyramid
 
 /*********define cluster************/
 typedef struct cluster cluster;
@@ -603,6 +603,8 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
 
   comp_col(zaa, zab, ndl, ndt, k, j_ref, pa_ref, nstrtl, nstrtt, lrow_done);
 
+  double colnorm = cblas_dnrm2(ndl, pa_ref, INCY);
+
   int i_ref = minabsvalloc_d(pa_ref, ndl);
   double rownorm = fabs(pa_ref[i_ref]);
   pb_ref = (double *)malloc(ndt * sizeof(double));
@@ -799,6 +801,7 @@ void fill_sub_leafmtx(leafmtx *st_lf, double znrmmat){
     }
 
     int kt = acaplus(st_lf->a2, st_lf->a1, ndl, ndt, nstrtl, nstrtt, kparam, eps, znrmmat, ACA_EPS);
+    st_lf->kt = kt;
     // printf("#fill kt=%d, nstrtl=%d, nstrtt=%d, ndl=%d, ndt=%d\n", kt, nstrtl, nstrtt, ndl, ndt);
 
     if(kt > kparam){
