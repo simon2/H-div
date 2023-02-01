@@ -17,6 +17,7 @@ To learn more about Tascell, please visit [Tascell introduction](http://ais.sys.
   - tascell compiler version later than Jan 21, 2019.
   - GCC version >= 4.8.5 (or ICC with compatibility of GCC version higher than 4.8.5)
 - To run tascell versions on distributed memory systems
+  - tascell compiler version later than May 15, 2022.
   - Intel C++ Compiler version >= 17
   - Intel MPI version >= 17
 
