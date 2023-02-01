@@ -43,3 +43,4 @@ make hmat_div
 - Hiroshi Nakashima
 - Akihiro Ida
 - Masahiro Yasugi
+- Keiichiro Fukazawa
