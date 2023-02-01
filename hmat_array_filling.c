@@ -11,11 +11,11 @@
 #endif
 
 // #define INPUT_DEFAULT "bem_data/input_10ts.txt"             //small data for dbg
-// #define INPUT_DEFAULT "bem_data/input_100ts.txt"            //Sphere
+// #define INPUT_DEFAULT "bem_data/input_100ts.txt"          //Sphere
 // #define INPUT_DEFAULT "bem_data/input_10ts_c30_3_3_4.txt"   //SphereCube
-// #define INPUT_DEFAULT "bem_data/input_10ts_p30_4.txt"       //SpherePyramid
+#define INPUT_DEFAULT "bem_data/input_10ts_p30_4.txt"       //SpherePyramid
 // #define INPUT_DEFAULT "bem_data/input_216h_5x10.txt"        //Humans
-#define INPUT_DEFAULT "bem_data/input_84tp7_30_2p.txt"      //SpherePyramidPyramid
+// #define INPUT_DEFAULT "bem_data/input_84tp7_30_2p.txt"      //SpherePyramidPyramid
 
 
 /*********define cluster************/
@@ -804,7 +804,7 @@ int acaplus(double* zaa, double* zab, int ndl, int ndt, int nstrtl, int nstrtt, 
 }
 
 void fill_leafmtx(leafmtx *st_lf, double znrmmat, int *lnmtx, int nd, int nlf){
-  double start,end;
+  double start,end,spent;
   
   double eps = 1.0e-8;
   double ACA_EPS = 0.9 * eps;
@@ -815,6 +815,11 @@ void fill_leafmtx(leafmtx *st_lf, double znrmmat, int *lnmtx, int nd, int nlf){
   int k_min = kparam;
   long k_sum = 0;
   int k_count = 0;
+
+  long sum_full_entries = 0;
+  long sum_acap_entries = 0;
+  double sum_time_full = 0.0;
+  double sum_time_acap = 0.0;
 
   for(ip=0;ip<nlf;ip++){
     
@@ -853,6 +858,11 @@ void fill_leafmtx(leafmtx *st_lf, double znrmmat, int *lnmtx, int nd, int nlf){
       st_lf[ip].a2 = (double *)realloc(st_lf[ip].a2, kt * ndl * sizeof(double));
 
       end = get_wall_time();
+      spent = end - start;
+      sum_time_acap += spent;
+      int t_entries = (kt * (ndt + ndl));
+      sum_acap_entries += t_entries;
+      printf("low-time: %lf\n low-entires: %d,\n time_per_entries:%lf\n",spent, t_entries, (spent/(double)t_entries));
       // if(end-start > 1.0)
       //   printf("Low-rank filling time: k=%d nstrtl=%d, nstrtt=%d, ndl=%d, ndt=%d time=%E\n", kt, nstrtl, nstrtt, ndl, ndt, end-start);
     }else if(st_lf[ip].ltmtx == 2){
@@ -874,13 +884,20 @@ void fill_leafmtx(leafmtx *st_lf, double znrmmat, int *lnmtx, int nd, int nlf){
           tempa1[il][it] = entry_ij(ill, itt);
         }
       }
-      double end = get_wall_time();
+      end = get_wall_time();
+      spent = end - start;
+      sum_time_full += spent;
+      int t_entries = (ndt * ndl);
+      sum_full_entries += t_entries;
+      // printf("full\n");
+      printf("full-time: %lf,\n full-entires: %d,\n time_per_entries:%lf\n",spent, t_entries, (spent/(double)t_entries));
       // if(end-start > 1.0)
       //   printf("Dense mtx filling time:  nstrtl=%d, nstrtt=%d, ndl=%d, ndt=%d time=%E\n", nstrtl, nstrtt, ndl, ndt, end-start);
     }
   }
   double k_average = (double)k_sum / k_count;
   printf("k_max:%d\nk_min:%d\nk_average:%f\n",k_max,k_min,k_average);
+  printf("acap entries:%d\tacap time:%lf\tfull entries:%d\tfull time:%lf\n",sum_acap_entries,sum_time_acap,sum_full_entries,sum_time_full);
 }
 
 void comp_row(double* zaa, double* zab, int ndl, int ndt, int k, int il, double* row, int nstrtl, int nstrtt, int* lrow_done){

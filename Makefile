@@ -9,17 +9,19 @@ COPT_MKL_SEQ=-mkl=sequential
 TARGETS = \
 hmat_div \
 hmat_div_direct \
+hmat_div_array \
 hmat_div_cilk \
 hmat_div_omp \
 hmat_div_BCT_cilk_list_reducer \
 hmat_div_BCT_cilk_lock \
 hmat_div_BCT_cilk_malloc \
 hmat_div_CT_cilk_parByLevel \
-hmat_div.cpp \
-hmat.c \
-hmat_div_tcell \
-hmat_div_locality \
-hmat_dist
+hmat_div_cpp \
+hmat_array_filling \
+hmat_array_filling_wBCT \
+hmat_array_filling_MPI \
+hmat_array_filling_dynamic \
+hmat_sc
 
 .phony: all
 
@@ -61,25 +63,25 @@ hmat_div_CT_cilk_parByLevel: hmat_div_CT_cilk_parByLevel.c
 	$(CC) $(COPT) -o $@ $<
 
 # Sequential C++ version
-hmat_div.cpp: hmat_div.cpp
+hmat_div_cpp: hmat_div.cpp
 	$(CXX) $(COPT) -o $@ $<
 
 # Filling versions
 hmat_array_filling: hmat_array_filling.c data/bem_file.c
-	$(CC) $(COPT) -o $@ $^ $(COPT_MKL)
+	$(CC) $(COPT) -o $@ $^ $(COPT_MKL_SEQ)
 
 hmat_array_filling_wBCT: hmat_array_filling_wBCT.c data/bem_file.c
-	$(CC) $(COPT) -o $@ $^ $(COPT_MKL)
+	$(CC) $(COPT) -o $@ $^ $(COPT_MKL_SEQ)
 
 # Filling in parallel by MPI & OpenMP
 hmat_array_filling_MPI: hmat_array_filling_MPI.c data/bem_file.c
 	$(CMPI) $(COPT) -o $@ $^ $(COPT_MKL)
 
 hmat_array_filling_dynamic: hmat_array_filling_dynamic.c data/bem_file.c
-	$(CMPI) $(COPT) $(COPT_OMP) -o $@ $^ $(COPT_MKL)
+	$(CMPI) $(COPT) $(COPT_OMP) -o $@ $^ $(COPT_MKL_SEQ)
 
 # Sequential (SC version)
-hmat.c: hmat.sc
+hmat_sc: hmat.sc
 	sc2c $<
 
 # Parallelized by Tascell using same methods as hmat_div_cilk.c

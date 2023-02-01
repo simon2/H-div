@@ -13,9 +13,9 @@
 // #define INPUT_DEFAULT "bem_data/input_10ts.txt"             //small data for dbg
 // #define INPUT_DEFAULT "bem_data/input_100ts.txt"            //Sphere
 // #define INPUT_DEFAULT "bem_data/input_10ts_c30_3_3_4.txt"   //SphereCube
-// #define INPUT_DEFAULT "bem_data/input_10ts_p30_4.txt"       //SpherePyramid
+#define INPUT_DEFAULT "bem_data/input_10ts_p30_4.txt"       //SpherePyramid
 // #define INPUT_DEFAULT "bem_data/input_216h_5x10.txt"        //Humans
-#define INPUT_DEFAULT "bem_data/input_84tp7_30_2p.txt"      //SpherePyramidPyramid
+// #define INPUT_DEFAULT "bem_data/input_84tp7_30_2p.txt"      //SpherePyramidPyramid
 
 /*********define cluster************/
 typedef struct cluster cluster;
