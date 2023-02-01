@@ -1,6 +1,6 @@
 # Synopsis
 
-H-div is a parallelized implementation of matrix partitioning in construction of hierarchical matrices using Cilk Plus and Tascell based on a sequential Fortran implementation in HACApK library coded by Prof. Akihito Ida.
+H-div is a parallelized implementation of construction of hierarchical matrices using Cilk Plus and Tascell based on a sequential Fortran implementation in HACApK library coded by Prof. Akihito Ida.
 
 To learn more about HACApK, please visit [HACApK introduction](http://ppopenhpc.cc.u-tokyo.ac.jp/ppopenhpc/2017/01/31/ppopen-applbem-ver-0-5-0/) or [HACApK github repository](https://github.com/Post-Peta-Crest/ppOpenHPC/tree/MATH/HACApK).
 
@@ -17,7 +17,7 @@ To learn more about Tascell, please visit [Tascell introduction](http://ais.sys.
   - tascell compiler version later than Jan 21, 2019.
   - GCC version >= 4.8.5 (or ICC with compatibility of GCC version higher than 4.8.5)
 - To run tascell versions on distributed memory systems
-  - tascell compiler version later than May 15, 2022.
+  - tascell compiler version later than May 15, 2022 of branch ``mpi-bcst``.
   - Intel C++ Compiler version >= 17
   - Intel MPI version >= 17
 
