@@ -18,7 +18,7 @@ To learn more about Tascell, please visit [Tascell introduction](http://ais.sys.
   - GCC version >= 4.8.5 (or ICC with compatibility of GCC version higher than 4.8.5)
 - To run tascell versions on distributed memory systems
   - Intel C++ Compiler version >= 17
-  - mpiicc >= 17
+  - Intel MPI version >= 17
 
 # Installation
 ```
