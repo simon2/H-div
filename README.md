@@ -13,9 +13,12 @@ To learn more about Tascell, please visit [Tascell introduction](http://ais.sys.
 # Requirements
 - An Intel multi-core CPU
 - To run Cilk Plus versions, Intel C++ Compiler version >= 17
-- To run tascell versions, 
+- To run tascell versions on shared memory systems
   - tascell compiler version later than Jan 21, 2019.
-  - GCC version >= 4.8.5
+  - GCC version >= 4.8.5 (or ICC with compatibility of GCC version higher than 4.8.5)
+- To run tascell versions on distributed memory systems
+  - Intel C++ Compiler version >= 17
+  - mpiicc >= 17
 
 # Installation
 ```
