@@ -6,9 +6,11 @@ H-div is a parallelized implementation of construction of hierarchical matrices 
 
 - To learn more about Tascell, please visit [Tascell introduction](http://ais.sys.i.kyoto-u.ac.jp/~task/tascell/index.html) or [Tascell github repository](https://github.com/tascell/sc-tascell).
 
-- For details of this implementation on shared memory systems, please read paper [_Parallelization of Matrix Partitioning in Construction of Hierarchical Matrices using Task Parallel Languages_](https://www.jstage.jst.go.jp/article/ipsjjip/27/0/27_840/_article/-char/ja/)
+- For details of this implementation on shared memory systems, please read paper [_Parallelization of Matrix Partitioning in Construction of Hierarchical Matrices using Task Parallel Languages_](https://www.jstage.jst.go.jp/article/ipsjjip/27/0/27_840/_article/-char/ja/).
 
-- For details of this implementation on distributed memory systems, please read paper [_Parallelization of Matrix Partitioning in Hierarchical Matrix Construction on Distributed Memory Systems_](https://www.jstage.jst.go.jp/article/ipsjjip/30/0/30_742/_article/-char/ja/)
+- For details of this implementation on distributed memory systems, please read paper [_Parallelization of Matrix Partitioning in Hierarchical Matrix Construction on Distributed Memory Systems_](https://www.jstage.jst.go.jp/article/ipsjjip/30/0/30_742/_article/-char/ja/).
+
+- For details of parallel implementation with both matrix partitioning and filling operation using Tascell, please read paper [Construction of Hierarchical Matrix on Distributed Memory Systems using a Task Parallel Language](https://ieeexplore.ieee.org/abstract/document/10062615).
 
 # Requirements
 - An Intel multi-core CPU
