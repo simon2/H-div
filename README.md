@@ -15,6 +15,8 @@ H-div is a parallelized implementation of construction of hierarchical matrices 
 # Requirements
 - An Intel multi-core CPU
 - To run Cilk Plus versions, Intel C++ Compiler version >= 17
+
+  (Note: Cilk Plus is no longer in support from Intel and will be removed from Intel compiler some day in the future.)
 - To run tascell versions on shared memory systems
   - tascell compiler version later than Jan 21, 2019.
   - GCC version >= 4.8.5 (or ICC with compatibility of GCC version higher than 4.8.5)
