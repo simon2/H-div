@@ -25,7 +25,7 @@ H-div is a parallelized implementation of construction of hierarchical matrices 
   - Intel C++ Compiler version >= 17
   - Intel MPI version >= 17
 
-# Installation
+# Download
 ```
 git clone https://github.com/simon2/H-div.git
 ```
