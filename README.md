@@ -54,8 +54,8 @@ make hmat_div
     - hmat_div_locality.tcell: Tried to make upper tree levels execute sequentially and execute in parallel in lower levels, for better data locality. However, the result of speedup is not essential.
     - hmat_dist.tcell: Baseline version parallelized on distributed memory systems.
     - hmat_dist_bcst.tcell: Add broad-cast to ``hmat_dist.tcell``.
-    - hmat_dist_cas.tcell: Use CAS to save CT nodes.
-    - hmat_dist_casc.tcell: Use CAS to save CT nodes, but in chunks.
+    - hmat_dist_cas.tcell: Use CAS to store CT nodes.
+    - hmat_dist_casc.tcell: Use CAS to store CT nodes, but in chunks.
 4. MPI + OpenMP
     - hmat_div_omp.c: The OpenMP implementation we mentioned in paper.
 
