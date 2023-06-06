@@ -13,7 +13,7 @@ H-div is a parallelized implementation of construction of hierarchical matrices 
 - For details of parallel implementation with both matrix partitioning and filling operation using Tascell, please read paper [Construction of Hierarchical Matrix on Distributed Memory Systems using a Task Parallel Language](https://ieeexplore.ieee.org/abstract/document/10062615).
 
 # Requirements
-- An Intel multi-core CPU
+- One or more Intel multi-core CPUs
 - To run Cilk Plus versions, Intel C++ Compiler version >= 17
 
   (Note: Cilk Plus is no longer in support from Intel and will be removed from Intel compiler some day in the future.)
