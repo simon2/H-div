@@ -56,7 +56,7 @@ make hmat_div
     - hmat_dist_bcst.tcell: Add broad-cast to ``hmat_dist.tcell``.
     - hmat_dist_cas.tcell: Use CAS to store CT nodes.
     - hmat_dist_casc.tcell: Use CAS to store CT nodes, but in chunks.
-4. MPI + OpenMP
+4. OpenMP
     - hmat_div_omp.c: The OpenMP implementation we mentioned in paper.
 
 ## 2. matrix partitioning + filling
