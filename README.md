@@ -1,16 +1,20 @@
 # Synopsis
 
-H-div is a parallelized implementation of construction of hierarchical matrices using Cilk Plus and Tascell based on a sequential Fortran implementation in HACApK library coded by Prof. Akihiro Ida.
+H-div is a parallelized implementation of construction of hierarchical matrices (H-matrices) using Cilk Plus and Tascell based on a sequential Fortran implementation in HACApK library coded by Prof. Akihiro Ida et al.
 
 - To learn more about HACApK, please visit [HACApK introduction](http://ppopenhpc.cc.u-tokyo.ac.jp/ppopenhpc/2017/01/31/ppopen-applbem-ver-0-5-0/) or [HACApK github repository](https://github.com/Post-Peta-Crest/ppOpenHPC/tree/MATH/HACApK).
 
 - To learn more about Tascell, please visit [Tascell introduction](http://ais.sys.i.kyoto-u.ac.jp/~task/tascell/index.html) or [Tascell github repository](https://github.com/tascell/sc-tascell).
 
-- For details of this implementation on shared memory systems, please read paper [_Parallelization of Matrix Partitioning in Construction of Hierarchical Matrices using Task Parallel Languages_](https://www.jstage.jst.go.jp/article/ipsjjip/27/0/27_840/_article/-char/ja/).
+# Publications
 
-- For details of this implementation on distributed memory systems, please read paper [_Parallelization of Matrix Partitioning in Hierarchical Matrix Construction on Distributed Memory Systems_](https://www.jstage.jst.go.jp/article/ipsjjip/30/0/30_742/_article/-char/ja/).
+- For details of this implementation on shared memory systems, please read paper [Parallelization of Matrix Partitioning in Construction of Hierarchical Matrices using Task Parallel Languages](https://www.jstage.jst.go.jp/article/ipsjjip/27/0/27_840/_article/-char/ja/).
+
+- For details of this implementation on distributed memory systems, please read paper [Parallelization of Matrix Partitioning in Hierarchical Matrix Construction on Distributed Memory Systems](https://www.jstage.jst.go.jp/article/ipsjjip/30/0/30_742/_article/-char/ja/).
 
 - For details of parallel implementation with both matrix partitioning and filling operation using Tascell, please read paper [Construction of Hierarchical Matrix on Distributed Memory Systems using a Task Parallel Language](https://ieeexplore.ieee.org/abstract/document/10062615).
+
+- Papers listed above has been summarized into my Ph.D. dissertation [Research on Parallel Hierarchical Matrix Construction](https://repository.kulib.kyoto-u.ac.jp/dspace/handle/2433/283863).
 
 # Requirements
 - One or more Intel multi-core CPUs
