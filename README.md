@@ -4,7 +4,7 @@ H-div is a parallelized implementation of construction of hierarchical matrices 
 
 - To learn more about HACApK, please visit [HACApK introduction](http://ppopenhpc.cc.u-tokyo.ac.jp/ppopenhpc/2017/01/31/ppopen-applbem-ver-0-5-0/) or [HACApK github repository](https://github.com/Post-Peta-Crest/ppOpenHPC/tree/MATH/HACApK).
 
-- To learn more about Tascell, please visit [Tascell introduction](http://ais.sys.i.kyoto-u.ac.jp/~task/tascell/index.html) or [Tascell github repository](https://github.com/tascell/sc-tascell).
+- To learn more about Tascell (Prof. Tasuku Hiraishi et al.), please visit [Tascell introduction](http://ais.sys.i.kyoto-u.ac.jp/~task/tascell/index.html) or [Tascell github repository](https://github.com/tascell/sc-tascell).
 
 # Publications
 
