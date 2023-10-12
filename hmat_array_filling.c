@@ -47,6 +47,7 @@ struct leafmtx{
 /*********define leafmtxp*********/  //whole H-matrix
 typedef struct leafmtxp leafmtxp;
 struct leafmtxp{
+  leafmtx* st_leafmtx;               //list of partitions (BCT leaf-nodes)
   int nlf;                           //number of partitions
   int nlfkt;                         //number ot partitions approximated
 };
@@ -245,6 +246,8 @@ void supermatrix_construction_cog_leafmtrx(leafmtxp *st_leafmtxp,    //the H-mat
   printf("filling time:%.10f\n",spent);
   printf("BCT + filling time:%.10f\n",spent2);
   printf("nlf:%d\n",nlf);
+  st_leafmtxp->st_leafmtx = st_leafmtx;
+  st_leafmtxp->nlf = nlf;
 }
 
 void qsort_row_leafmtx(leafmtx *st_leafmtx,int first,int last){
